@@ -184,7 +184,15 @@ def role_required(roles):
 # Routes - HTML Pages
 @app.route('/')
 def index():
-    return redirect(url_for('login_page'))
+   return render_template('index.html')
+
+@app.route('/about')
+def about():
+   return render_template('about.html')
+
+@app.route('/contact')
+def contact():
+   return render_template('contact.html')
 
 @app.route('/login')
 def login_page():

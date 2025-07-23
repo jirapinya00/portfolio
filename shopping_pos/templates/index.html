@@ -1,72 +1,55 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="th">
 <head>
     <meta charset="UTF-8">
-    <title>Shopping POS</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>สินค้า - ร้านค้าออนไลน์</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body style="background: #f6fff7; font-family: 'Segoe UI', Arial, sans-serif; margin: 0;">
-    <header style="background: linear-gradient(90deg, #43ea7b 0%, #1fa463 100%); color: #fff; padding: 24px 0 12px 0; box-shadow: 0 2px 8px rgba(34,139,34,0.08);">
-        <h1 style="margin: 0; font-size: 2.2rem; letter-spacing: 2px; text-align: center;">Shopping POS</h1>
-        <nav>
-            <ul style="display: flex; justify-content: center; gap: 32px; list-style: none; margin: 16px 0 0 0; padding: 0;">
-                <li><a href="#" style="color: #fff; text-decoration: none; font-weight: 500; padding: 8px 16px; border-radius: 6px; transition: background 0.2s;">หน้าหลัก</a></li>
-                <li><a href="#" style="color: #fff; text-decoration: none; font-weight: 500; padding: 8px 16px; border-radius: 6px; transition: background 0.2s;">สินค้า</a></li>
-                <li><a href="#" style="color: #fff; text-decoration: none; font-weight: 500; padding: 8px 16px; border-radius: 6px; transition: background 0.2s;">ตะกร้า</a></li>
-                <li><a href="#" style="color: #fff; text-decoration: none; font-weight: 500; padding: 8px 16px; border-radius: 6px; transition: background 0.2s;">ติดต่อเรา</a></li>
+<body>
+    <nav class="navbar shadow-lg">
+        <div class="navbar-content flex-between">
+            <a href="/" class="navbar-brand">🛍️ ร้านค้าออนไลน์</a>
+            <ul class="navbar-nav">
+                <li><a href="#products" class="active">สินค้า</a></li>
+                <li><a href="/about">เกี่ยวกับเรา</a></li>
+                <li><a href="/contact">ติดต่อ</a></li>
             </ul>
-        </nav>
-    </header>
-    <main style="max-width: 1000px; margin: 40px auto 0 auto; padding: 0 16px;">
-        <section>
-            <h2 style="color: #1fa463; font-size: 1.7rem; margin-bottom: 24px; text-align: center;">สินค้าแนะนำ</h2>
-            <div style="display: flex; gap: 32px; flex-wrap: wrap; justify-content: center;">
-                <div style="background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(34,139,34,0.08); border: 1px solid #e0f2e9; padding: 18px; width: 220px; display: flex; flex-direction: column; align-items: center;">
-                    <img src="https://via.placeholder.com/150/43ea7b/ffffff?text=สินค้า+1" alt="สินค้า 1" style="width:100%; border-radius: 8px; margin-bottom: 12px;">
-                    <h3 style="color: #1fa463; margin: 0 0 8px 0;">สินค้า 1</h3>
-                    <p style="color: #555; margin: 0 0 8px 0;">รายละเอียดสินค้า 1</p>
-                    <p style="color: #43ea7b; font-weight: bold; margin: 0 0 16px 0;">ราคา: 100 บาท</p>
-                    <button style="background: linear-gradient(90deg, #43ea7b 0%, #1fa463 100%); color: #fff; border: none; border-radius: 6px; padding: 10px 0; width: 100%; font-size: 1rem; font-weight: 500; cursor: pointer; transition: background 0.2s;">หยิบใส่ตะกร้า</button>
-                </div>
-                <div style="background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(34,139,34,0.08); border: 1px solid #e0f2e9; padding: 18px; width: 220px; display: flex; flex-direction: column; align-items: center;">
-                    <img src="https://via.placeholder.com/150/43ea7b/ffffff?text=สินค้า+2" alt="สินค้า 2" style="width:100%; border-radius: 8px; margin-bottom: 12px;">
-                    <h3 style="color: #1fa463; margin: 0 0 8px 0;">สินค้า 2</h3>
-                    <p style="color: #555; margin: 0 0 8px 0;">รายละเอียดสินค้า 2</p>
-                    <p style="color: #43ea7b; font-weight: bold; margin: 0 0 16px 0;">ราคา: 150 บาท</p>
-                    <button style="background: linear-gradient(90deg, #43ea7b 0%, #1fa463 100%); color: #fff; border: none; border-radius: 6px; padding: 10px 0; width: 100%; font-size: 1rem; font-weight: 500; cursor: pointer; transition: background 0.2s;">หยิบใส่ตะกร้า</button>
-                </div>
-                <div style="background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(34,139,34,0.08); border: 1px solid #e0f2e9; padding: 18px; width: 220px; display: flex; flex-direction: column; align-items: center;">
-                    <img src="https://via.placeholder.com/150/43ea7b/ffffff?text=สินค้า+3" alt="สินค้า 3" style="width:100%; border-radius: 8px; margin-bottom: 12px;">
-                    <h3 style="color: #1fa463; margin: 0 0 8px 0;">สินค้า 3</h3>
-                    <p style="color: #555; margin: 0 0 8px 0;">รายละเอียดสินค้า 3</p>
-                    <p style="color: #43ea7b; font-weight: bold; margin: 0 0 16px 0;">ราคา: 200 บาท</p>
-                    <button style="background: linear-gradient(90deg, #43ea7b 0%, #1fa463 100%); color: #fff; border: none; border-radius: 6px; padding: 10px 0; width: 100%; font-size: 1rem; font-weight: 500; cursor: pointer; transition: background 0.2s;">หยิบใส่ตะกร้า</button>
-                </div>
+            <div class="user-info">
+                <a href="/login" class="btn btn-primary">เข้าสู่ระบบ</a>
+                <a href="/register" class="btn btn-secondary">สมัครสมาชิก</a>
             </div>
-        </section>
-    </main>
-    <footer style="margin-top: 48px; text-align: center; background: #e0f2e9; color: #1fa463; padding: 18px 0; font-size: 1rem;">
-        <p>&copy; 2024 Shopping POS</p>
+        </div>
+    </nav>
+
+    <section class="main-content">
+        <div class="page-header text-center">
+            <h1>สินค้าแนะนำ</h1>
+            <p>เลือกซื้อสินค้าคุณภาพ พร้อมส่งตรงถึงคุณทั่วประเทศ</p>
+        </div>
+
+        <!-- Filter + Search -->
+        <div class="filter-bar">
+            <div class="category-filter">
+                <button class="btn btn-secondary category-btn active" data-category="all">ทั้งหมด</button>
+                <div id="category-buttons"></div>
+            </div>
+            <div class="search-bar">
+                <input type="text" id="search-input" placeholder="ค้นหาสินค้า...">
+            </div>
+        </div>
+
+        <!-- Products Grid -->
+        <div id="loading" class="loading-spinner"></div>
+        <div id="products-container" class="products-grid"></div>
+        <div id="no-products" class="text-center">ไม่พบสินค้า</div>
+    </section>
+
+    <footer class="login-footer" id="contact">
+        <p>ร้านค้าออนไลน์ &copy; 2025 - ออกแบบโดยทีมพัฒนา</p>
+        <p><a href="mailto:support@pos.com">ติดต่อฝ่ายสนับสนุน</a></p>
     </footer>
-    <script>
-        // เพิ่ม effect hover ให้ปุ่ม
-        document.querySelectorAll('button').forEach(btn => {
-            btn.addEventListener('mouseover', () => {
-                btn.style.background = 'linear-gradient(90deg, #1fa463 0%, #43ea7b 100%)';
-            });
-            btn.addEventListener('mouseout', () => {
-                btn.style.background = 'linear-gradient(90deg, #43ea7b 0%, #1fa463 100%)';
-            });
-        });
-        // เพิ่ม effect hover ให้เมนู
-        document.querySelectorAll('nav a').forEach(link => {
-            link.addEventListener('mouseover', () => {
-                link.style.background = 'rgba(34,139,34,0.15)';
-            });
-            link.addEventListener('mouseout', () => {
-                link.style.background = 'none';
-            });
-        });
-    </script>
+
+    <script src="/static/scripts/homepage.js"></script>
 </body>
 </html>
