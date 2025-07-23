@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เข้าสู่ระบบ - POS System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="login-page">
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <h1>🏪 POS System</h1>
+                <p>เข้าสู่ระบบ</p>
+            </div>
+            
+            <form id="loginForm" class="login-form">
+                <div class="form-group">
+                    <label for="username">ชื่อผู้ใช้ หรือ อีเมล</label>
+                    <input type="text" id="username" name="username" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">รหัสผ่าน</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-login">
+                    เข้าสู่ระบบ
+                </button>
+            </form>
+            
+            <div class="login-footer">
+                <p>ยังไม่มีบัญชี? <a href="/register">สมัครสมาชิก</a></p>
+            </div>
+            
+            <div class="demo-accounts">
+                <h3>บัญชีทดสอบ</h3>
+                <div class="demo-account">
+                    <strong>Admin:</strong> admin / admin123
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Loading Modal -->
+    <div id="loadingModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="loading-spinner"></div>
+            <p>กำลังเข้าสู่ระบบ...</p>
+        </div>
+    </div>
+    
+    <!-- Alert Modal -->
+    <div id="alertModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('alertModal')">&times;</span>
+            <div id="alertContent"></div>
+        </div>
+    </div>
+
+    <script>
+        // ตรวจสอบว่ามี token อยู่แล้วหรือไม่
+        document.addEventListener('DOMContentLoaded', function() {
+            const token = localStorage.getItem('access_token');
+            if (token) {
+                // ตรวจสอบ token ว่ายังใช้ได้อยู่หรือไม่
+                fetch('/api/auth/profile', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => {
+                    if (response.ok) {
+                        window.location.href = '/dashboard';
+                    } else {
+                        localStorage.removeItem('access_token');
+                        localStorage.removeItem('user_data');
+                    }
+                })
+                .catch(error => {
+                    localStorage.removeItem('access_token');
+                    localStorage.removeItem('user_data');
+                });
+            }
+        });
+
+        // ฟังก์ชันเข้าสู่ระบบ
+        function submitLogin() {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            
+            if (!username || !password) {
+                showAlert('กรุณากรอกชื่อผู้ใช้และรหัสผ่าน', 'error');
+                return;
+            }
+            
+            showLoading(true);
+            
+            fetch('/api/auth/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    username: username,
+                    password: password
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                showLoading(false);
+                
+                if (data.access_token) {
+                    // บันทึก token และข้อมูลผู้ใช้
+                    localStorage.setItem('access_token', data.access_token);
+                    localStorage.setItem('user_data', JSON.stringify(data.user));
+                    
+                    showAlert('เข้าสู่ระบบสำเร็จ', 'success');
+                    
+                    // รอ 1 วินาทีแล้วไปหน้า dashboard
+                    setTimeout(() => {
+                        window.location.href = '/dashboard';
+                    }, 1000);
+                } else {
+                    showAlert(data.message || 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ', 'error');
+                }
+            })
+            .catch(error => {
+                showLoading(false);
+                console.error('Login error:', error);
+                showAlert('เกิดข้อผิดพลาดในการเชื่อมต่อ', 'error');
+            });
+        }
+
+        // Event listeners
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            submitLogin();
+        });
+
+        // Enter key support
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                submitLogin();
+            }
+        });
+
+        // Utility functions
+        function showLoading(show) {
+            const modal = document.getElementById('loadingModal');
+            modal.style.display = show ? 'block' : 'none';
+        }
+
+        function showAlert(message, type = 'info') {
+            const modal = document.getElementById('alertModal');
+            const content = document.getElementById('alertContent');
+            
+            const typeClass = type === 'error' ? 'alert-error' : 
+                             type === 'success' ? 'alert-success' : 'alert-info';
+            
+            content.innerHTML = `<div class="alert ${typeClass}">${message}</div>`;
+            modal.style.display = 'block';
+            
+            // ปิดอัตโนมัติใน 3 วินาที
+            setTimeout(() => {
+                closeModal('alertModal');
+            }, 3000);
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        // Quick login for demo
+        function quickLogin(username, password) {
+            document.getElementById('username').value = username;
+            document.getElementById('password').value = password;
+            submitLogin();
+        }
+
+        // Add click event to demo account
+        document.querySelector('.demo-account').addEventListener('click', function() {
+            quickLogin('admin', 'admin123');
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>รายงานการขาย - POS System</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <h2>POS System</h2>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="/dashboard">หน้าแรก</a></li>
+                <li><a href="/pos">ขายสินค้า</a></li>
+                <li><a href="/products">จัดการสินค้า</a></li>
+                <li><a href="/reports" class="active">รายงาน</a></li>
+                <li><a href="/sales">ประวัติขาย</a></li>
+                <li><a href="/inventory">ประวัติสต็อก</a></li>
+                <li><a href="/users">ผู้ใช้งาน</a></li>
+                <li><a href="/settings">ตั้งค่า</a></li>
+                <li><a href="#" onclick="logout()">ออกจากระบบ</a></li>
+            </ul>
+        </nav>
+
+        <main class="main-content">
+            <div class="header">
+                <h1>รายงานการขาย</h1>
+                <div class="user-info">
+                    <span id="userName">กำลังโหลด...</span>
+                </div>
+            </div>
+
+            <div class="content">
+                <div class="filter-section">
+                    <div class="filter-row">
+                        <div class="form-group">
+                            <label for="startDate">วันที่เริ่มต้น</label>
+                            <input type="date" id="startDate" name="start_date">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="endDate">วันที่สิ้นสุด</label>
+                            <input type="date" id="endDate" name="end_date">
+                        </div>
+                        
+                        <div class="form-group">
+                            <button class="btn btn-primary" onclick="generateReport()">ดูรายงาน</button>
+                            <button class="btn btn-secondary" onclick="clearFilter()">ล้าง</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="summary-cards" id="summaryCards">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>ยอดขายรวม</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="stat-number" id="totalSales">฿0.00</div>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>จำนวนออเดอร์</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="stat-number" id="totalOrders">0</div>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>ยอดเฉลี่ย/ออเดอร์</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="stat-number" id="averageOrder">฿0.00</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-section">
+                    <div class="section-header">
+                        <h2>รายละเอียดการขาย</h2>
+                        <button class="btn btn-success" onclick="exportReport()">ส่งออก Excel</button>
+                    </div>
+                    
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>เลขที่ใบเสร็จ</th>
+                                    <th>วันที่</th>
+                                    <th>เวลา</th>
+                                    <th>ลูกค้า</th>
+                                    <th>จำนวนสินค้า</th>
+                                    <th>ยอดรวม</th>
+                                    <th>ส่วนลด</th>
+                                    <th>ยอดสุทธิ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="salesTableBody">
+                                <!-- Sales data will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="loadingSpinner" class="loading hidden">กำลังโหลดข้อมูล...</div>
+                <div id="messageDiv" class="message hidden"></div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        let currentReportData = null;
+
+        // Check authentication
+        function checkAuth() {
+            const token = localStorage.getItem('token');
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            
+            if (!token) {
+                window.location.href = '/';
+                return false;
+            }
+            
+            document.getElementById('userName').textContent = user.username || 'ผู้ใช้';
+            return true;
+        }
+
+        // Set default dates (last 30 days)
+        function setDefaultDates() {
+            const today = new Date();
+            const thirtyDaysAgo = new Date(today);
+            thirtyDaysAgo.setDate(today.getDate() - 30);
+            
+            document.getElementById('endDate').value = today.toISOString().split('T')[0];
+            document.getElementById('startDate').value = thirtyDaysAgo.toISOString().split('T')[0];
+        }
+
+        // Generate report
+        async function generateReport() {
+            if (!checkAuth()) return;
+            
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const token = localStorage.getItem('token');
+            
+            if (!startDate || !endDate) {
+                showMessage('กรุณาเลือกช่วงวันที่', 'error');
+                return;
+            }
+            
+            if (new Date(startDate) > new Date(endDate)) {
+                showMessage('วันที่เริ่มต้นต้องไม่เกินวันที่สิ้นสุด', 'error');
+                return;
+            }
+            
+            try {
+                document.getElementById('loadingSpinner').classList.remove('hidden');
+                
+                const response = await fetch(`/api/reports/sales?start_date=${startDate}&end_date=${endDate}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    currentReportData = data;
+                    displayReport(data);
+                } else if (response.status === 401) {
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    window.location.href = '/';
+                } else {
+                    showMessage('ไม่สามารถดึงข้อมูลรายงานได้', 'error');
+                }
+            } catch (error) {
+                console.error('Error generating report:', error);
+                showMessage('เกิดข้อผิดพลาดในการสร้างรายงาน', 'error');
+            } finally {
+                document.getElementById('loadingSpinner').classList.add('hidden');
+            }
+        }
+
+        // Display report data
+        function displayReport(data) {
+            // Update summary cards
+            document.getElementById('totalSales').textContent = `฿${data.total_sales.toFixed(2)}`;
+            document.getElementById('totalOrders').textContent = data.total_orders;
+            document.getElementById('averageOrder').textContent = `฿${data.average_order.toFixed(2)}`;
+            
+            // Update table
+            const tbody = document.getElementById('salesTableBody');
+            
+            if (data.sales.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center">ไม่มีข้อมูลการขายในช่วงวันที่นี้</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = data.sales.map(sale => {
+                const saleDate = new Date(sale.created_at);
+                const dateStr = saleDate.toLocaleDateString('th-TH');
+                const timeStr = saleDate.toLocaleTimeString('th-TH');
+                
+                return `
+                    <tr>
+                        <td>${sale.sale_number}</td>
+                        <td>${dateStr}</td>
+                        <td>${timeStr}</td>
+                        <td>${sale.customer || 'ลูกค้าทั่วไป'}</td>
+                        <td class="text-center">${sale.item_count || '-'}</td>
+                        <td class="text-right">฿${sale.total_amount ? sale.total_amount.toFixed(2) : sale.final_amount.toFixed(2)}</td>
+                        <td class="text-right">฿${sale.discount_amount ? sale.discount_amount.toFixed(2) : '0.00'}</td>
+                        <td class="text-right text-bold">฿${sale.final_amount.toFixed(2)}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Clear filter
+        function clearFilter() {
+            document.getElementById('startDate').value = '';
+            document.getElementById('endDate').value = '';
+            
+            // Clear report display
+            document.getElementById('totalSales').textContent = '฿0.00';
+            document.getElementById('totalOrders').textContent = '0';
+            document.getElementById('averageOrder').textContent = '฿0.00';
+            
+            const tbody = document.getElementById('salesTableBody');
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center">เลือกช่วงวันที่เพื่อดูรายงาน</td></tr>';
+            
+            currentReportData = null;
+        }
+
+        // Export report to CSV (simple implementation)
+        function exportReport() {
+            if (!currentReportData || !currentReportData.sales.length) {
+                showMessage('ไม่มีข้อมูลสำหรับส่งออก', 'error');
+                return;
+            }
+            
+            const headers = ['เลขที่ใบเสร็จ', 'วันที่', 'เวลา', 'ลูกค้า', 'ยอดสุทธิ'];
+            const csvContent = [
+                headers.join(','),
+                ...currentReportData.sales.map(sale => {
+                    const saleDate = new Date(sale.created_at);
+                    const dateStr = saleDate.toLocaleDateString('th-TH');
+                    const timeStr = saleDate.toLocaleTimeString('th-TH');
+                    
+                    return [
+                        sale.sale_number,
+                        dateStr,
+                        timeStr,
+                        sale.customer || 'ลูกค้าทั่วไป',
+                        sale.final_amount.toFixed(2)
+                    ].join(',');
+                })
+            ].join('\n');
+            
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            
+            if (link.download !== undefined) {
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', `sales_report_${new Date().toISOString().split('T')[0]}.csv`);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                showMessage('ส่งออกรายงานสำเร็จ', 'success');
+            }
+        }
+
+        // Utility functions
+        function showMessage(message, type) {
+            const messageDiv = document.getElementById('messageDiv');
+            messageDiv.textContent = message;
+            messageDiv.className = `message ${type}`;
+            messageDiv.classList.remove('hidden');
+            
+            setTimeout(() => {
+                messageDiv.classList.add('hidden');
+            }, 5000);
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = '/';
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            if (checkAuth()) {
+                setDefaultDates();
+                generateReport(); // Auto-generate report for last 30 days
+            }
+        });
+    </script>
+</body>
+</html>

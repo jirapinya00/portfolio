@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>สมัครสมาชิก - POS System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="login-page">
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <h1>🏪 POS System</h1>
+                <p>สมัครสมาชิก</p>
+            </div>
+            
+            <form id="registerForm" class="login-form">
+                <div class="form-group">
+                    <label for="username">ชื่อผู้ใช้</label>
+                    <input type="text" id="username" name="username" required>
+                    <small>ใช้สำหรับเข้าสู่ระบบ</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">อีเมล</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">รหัสผ่าน</label>
+                    <input type="password" id="password" name="password" required>
+                    <small>อย่างน้อย 6 ตัวอักษร</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="confirmPassword">ยืนยันรหัสผ่าน</label>
+                    <input type="password" id="confirmPassword" name="confirmPassword" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="role">ตำแหน่ง</label>
+                    <select id="role" name="role_id">
+                        <option value="2">พนักงาน (Staff)</option>
+                        <option value="3">ผู้จัดการ (Manager)</option>
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-login">
+                    สมัครสมาชิก
+                </button>
+            </form>
+            
+            <div class="login-footer">
+                <p>มีบัญชีอยู่แล้ว? <a href="/login">เข้าสู่ระบบ</a></p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Loading Modal -->
+    <div id="loadingModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="loading-spinner"></div>
+            <p>กำลังสมัครสมาชิก...</p>
+        </div>
+    </div>
+    
+    <!-- Alert Modal -->
+    <div id="alertModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('alertModal')">&times;</span>
+            <div id="alertContent"></div>
+        </div>
+    </div>
+
+    <script>
+        // ตรวจสอบว่ามี token อยู่แล้วหรือไม่
+        document.addEventListener('DOMContentLoaded', function() {
+            const token = localStorage.getItem('access_token');
+            if (token) {
+                // ถ้ามี token แล้วให้ไปหน้า dashboard
+                window.location.href = '/dashboard';
+            }
+        });
+
+        // ฟังก์ชันสมัครสมาชิก
+        function submitRegister() {
+            const username = document.getElementById('username').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const roleId = document.getElementById('role').value;
+            
+            // ตรวจสอบข้อมูล
+            if (!username || !email || !password || !confirmPassword) {
+                showAlert('กรุณากรอกข้อมูลให้ครบถ้วน', 'error');
+                return;
+            }
+            
+            if (password.length < 6) {
+                showAlert('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร', 'error');
+                return;
+            }
+            
+            if (password !== confirmPassword) {
+                showAlert('รหัสผ่านไม่ตรงกัน', 'error');
+                return;
+            }
+            
+            // ตรวจสอบรูปแบบอีเมล
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                showAlert('รูปแบบอีเมลไม่ถูกต้อง', 'error');
+                return;
+            }
+            
+            showLoading(true);
+            
+            fetch('/api/auth/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    username: username,
+                    email: email,
+                    password: password,
+                    role_id: parseInt(roleId)
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                showLoading(false);
+                
+                if (data.message === 'สมัครสมาชิกสำเร็จ') {
+                    showAlert('สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบ', 'success');
+                    
+                    // รอ 2 วินาทีแล้วไปหน้า login
+                    setTimeout(() => {
+                        window.location.href = '/login';
+                    }, 2000);
+                } else {
+                    showAlert(data.message || 'เกิดข้อผิดพลาดในการสมัครสมาชิก', 'error');
+                }
+            })
+            .catch(error => {
+                showLoading(false);
+                console.error('Register error:', error);
+                showAlert('เกิดข้อผิดพลาดในการเชื่อมต่อ', 'error');
+            });
+        }
+
+        // Event listeners
+        document.getElementById('registerForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            submitRegister();
+        });
+
+        // Real-time password confirmation check
+        document.getElementById('confirmPassword').addEventListener('input', function() {
+            const password = document.getElementById('password').value;
+            const confirmPassword = this.value;
+            
+            if (confirmPassword && password !== confirmPassword) {
+                this.style.borderColor = '#ff4757';
+            } else {
+                this.style.borderColor = '#ddd';
+            }
+        });
+
+        // Username validation
+        document.getElementById('username').addEventListener('input', function() {
+            const username = this.value;
+            
+            // ตรวจสอบว่ามีแค่ตัวอักษรและตัวเลข
+            if (username && !/^[a-zA-Z0-9_]+$/.test(username)) {
+                this.style.borderColor = '#ff4757';
+                showAlert('ชื่อผู้ใช้ใช้ได้เฉพาะตัวอักษร, ตัวเลข และ _ เท่านั้น', 'error');
+            } else {
+                this.style.borderColor = '#ddd';
+            }
+        });
+
+        // Utility functions
+        function showLoading(show) {
+            const modal = document.getElementById('loadingModal');
+            modal.style.display = show ? 'block' : 'none';
+        }
+
+        function showAlert(message, type = 'info') {
+            const modal = document.getElementById('alertModal');
+            const content = document.getElementById('alertContent');
+            
+            const typeClass = type === 'error' ? 'alert-error' : 
+                             type === 'success' ? 'alert-success' : 'alert-info';
+            
+            content.innerHTML = `<div class="alert ${typeClass}">${message}</div>`;
+            modal.style.display = 'block';
+            
+            // ปิดอัตโนมัติใน 3 วินาที (ยกเว้น error)
+            if (type !== 'error') {
+                setTimeout(() => {
+                    closeModal('alertModal');
+                }, 3000);
+            }
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Categories Management</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="sidebar">
+        <nav>
+            <a href="/dashboard">Dashboard</a>
+            <a href="/pos">POS</a>
+            <a href="/products">Products</a>
+            <a href="/categories" class="active">Categories</a>
+            <a href="/sales">Sales History</a>
+            <a href="/reports">Reports</a>
+            <a href="/users">Users</a>
+            <a href="/settings">Settings</a>
+            <a href="#" onclick="logout()">Logout</a>
+        </nav>
+    </div>
+
+    <div class="main-content">
+        <h1>Categories Management</h1>
+        
+        <div class="action-bar">
+            <button onclick="showAddCategoryForm()" class="primary-btn">Add New Category</button>
+            <input type="text" id="searchCategory" onkeyup="filterCategories()" placeholder="Search categories...">
+        </div>
+
+        <div class="category-list">
+            <table id="categoriesTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Description</th>
+                        <th>Products Count</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="categoryTableBody">
+                    <!-- Categories will be loaded here -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Add/Edit Category Modal -->
+        <div id="categoryModal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <h2 id="modalTitle">Add Category</h2>
+                <form id="categoryForm" onsubmit="handleCategorySubmit(event)">
+                    <input type="hidden" id="categoryId">
+                    <div class="form-group">
+                        <label for="categoryName">Category Name:</label>
+                        <input type="text" id="categoryName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="categoryDescription">Description:</label>
+                        <textarea id="categoryDescription"></textarea>
+                    </div>
+                    <button type="submit" class="primary-btn">Save Category</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Check authentication on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = '/login';
+                return;
+            }
+            fetchCategories();
+        });
+
+        async function fetchCategories() {
+            try {
+                const response = await fetch('/api/categories', {
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('token')
+                    }
+                });
+                if (response.ok) {
+                    const categories = await response.json();
+                    displayCategories(categories);
+                } else {
+                    throw new Error('Failed to fetch categories');
+                }
+            } catch (error) {
+                alert('Error loading categories: ' + error.message);
+            }
+        }
+
+        function displayCategories(categories) {
+            const tbody = document.getElementById('categoryTableBody');
+            tbody.innerHTML = '';
+            categories.forEach(category => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${category.id}</td>
+                        <td>${category.name}</td>
+                        <td>${category.description || '-'}</td>
+                        <td>${category.products_count || 0}</td>
+                        <td>
+                            <button onclick="editCategory(${category.id})" class="edit-btn">Edit</button>
+                            <button onclick="deleteCategory(${category.id})" class="delete-btn">Delete</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        async function handleCategorySubmit(event) {
+            event.preventDefault();
+            const categoryId = document.getElementById('categoryId').value;
+            const categoryData = {
+                name: document.getElementById('categoryName').value,
+                description: document.getElementById('categoryDescription').value
+            };
+
+            try {
+                const url = categoryId ? `/api/categories/${categoryId}` : '/api/categories';
+                const method = categoryId ? 'PUT' : 'POST';
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + localStorage.getItem('token')
+                    },
+                    body: JSON.stringify(categoryData)
+                });
+
+                if (response.ok) {
+                    document.getElementById('categoryModal').style.display = 'none';
+                    fetchCategories();
+                } else {
+                    throw new Error('Failed to save category');
+                }
+            } catch (error) {
+                alert('Error saving category: ' + error.message);
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            window.location.href = '/login';
+        }
+
+        // Modal handling functions
+        function showAddCategoryForm() {
+            document.getElementById('modalTitle').textContent = 'Add Category';
+            document.getElementById('categoryForm').reset();
+            document.getElementById('categoryId').value = '';
+            document.getElementById('categoryModal').style.display = 'block';
+        }
+
+        // Close modal when clicking (x)
+        document.querySelector('.close').onclick = function() {
+            document.getElementById('categoryModal').style.display = 'none';
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>จัดการผู้ใช้ - POS System</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="main-container">
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <h2>POS System</h2>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="/dashboard">🏠 แดชบอร์ด</a></li>
+                <li><a href="/pos_dashboard">💰 ขายสินค้า</a></li>
+                <li><a href="/products">📦 จัดการสินค้า</a></li>
+                <li><a href="/users" class="active">👥 จัดการผู้ใช้</a></li>
+                <li><a href="/report_sales">📊 รายงานการขาย</a></li>
+                <li><a href="/sale_history">📋 ประวัติการขาย</a></li>
+                <li><a href="/inventory_logs">📝 ประวัติสต็อก</a></li>
+                <li><a href="/settings">⚙️ ตั้งค่า</a></li>
+                <li><a href="#" onclick="logout()">🚪 ออกจากระบบ</a></li>
+            </ul>
+        </nav>
+
+        <div class="main-content">
+            <div class="header">
+                <h1>จัดการผู้ใช้งาน</h1>
+                <div class="header-actions">
+                    <button class="btn btn-primary" onclick="showAddUserModal()">+ เพิ่มผู้ใช้ใหม่</button>
+                </div>
+            </div>
+
+            <div class="content">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>รายชื่อผู้ใช้งาน</h3>
+                    </div>
+                    <div class="card-body">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>ชื่อผู้ใช้</th>
+                                    <th>ชื่อจริง</th>
+                                    <th>อีเมล</th>
+                                    <th>ตำแหน่ง</th>
+                                    <th>สถานะ</th>
+                                    <th>วันที่สร้าง</th>
+                                    <th>จัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersTableBody">
+                                <!-- ข้อมูลจะถูกโหลดจาก JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal สำหรับเพิ่ม/แก้ไขผู้ใช้ -->
+    <div id="userModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">เพิ่มผู้ใช้ใหม่</h3>
+                <button class="modal-close" onclick="closeUserModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="userForm">
+                    <input type="hidden" id="userId" name="user_id">
+                    
+                    <div class="form-group">
+                        <label for="username">ชื่อผู้ใช้ *</label>
+                        <input type="text" id="username" name="username" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password">รหัสผ่าน *</label>
+                        <input type="password" id="password" name="password" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="full_name">ชื่อจริง *</label>
+                        <input type="text" id="full_name" name="full_name" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="email">อีเมล *</label>
+                        <input type="email" id="email" name="email" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="role_id">ตำแหน่ง *</label>
+                        <select id="role_id" name="role_id" required>
+                            <option value="">-- เลือกตำแหน่ง --</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="is_active">สถานะ</label>
+                        <select id="is_active" name="is_active">
+                            <option value="1">เปิดใช้งาน</option>
+                            <option value="0">ปิดใช้งาน</option>
+                        </select>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">บันทึก</button>
+                        <button type="button" class="btn btn-secondary" onclick="closeUserModal()">ยกเลิก</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="errorMessage" class="error-message" style="display: none;"></div>
+    <div id="successMessage" class="success-message" style="display: none;"></div>
+
+    <script>
+        let users = [];
+        let roles = [];
+        let currentUser = null;
+
+        // ตรวจสอบ authentication เมื่อโหลดหน้า
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuth();
+            loadRoles();
+            loadUsers();
+        });
+
+        // ฟังก์ชันตรวจสอบ authentication
+        function checkAuth() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = '/login';
+                return;
+            }
+
+            try {
+                const user = JSON.parse(localStorage.getItem('user'));
+                if (!user || user.role !== 'admin') {
+                    alert('คุณไม่มีสิทธิ์เข้าถึงหน้านี้');
+                    window.location.href = '/dashboard';
+                }
+                currentUser = user;
+            } catch (error) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                window.location.href = '/login';
+            }
+        }
+
+        // ฟังก์ชันแสดงข้อความ
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            setTimeout(() => errorDiv.style.display = 'none', 5000);
+        }
+
+        function showSuccess(message) {
+            const successDiv = document.getElementById('successMessage');
+            successDiv.textContent = message;
+            successDiv.style.display = 'block';
+            setTimeout(() => successDiv.style.display = 'none', 3000);
+        }
+
+        // ฟังก์ชันโหลดข้อมูล roles
+        async function loadRoles() {
+            try {
+                const response = await fetch('/api/roles', {
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('token')
+                    }
+                });
+
+                if (response.ok) {
+                    roles = await response.json();
+                    const roleSelect = document.getElementById('role_id');
+                    roleSelect.innerHTML = '<option value="">-- เลือกตำแหน่ง --</option>';
+                    
+                    roles.forEach(role => {
+                        const option = document.createElement('option');
+                        option.value = role.id;
+                        option.textContent = role.name;
+                        roleSelect.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading roles:', error);
+            }
+        }
+
+        // ฟังก์ชันโหลดข้อมูลผู้ใช้
+        async function loadUsers() {
+            try {
+                const response = await fetch('/api/users', {
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('token')
+                    }
+                });
+
+                if (response.ok) {
+                    users = await response.json();
+                    displayUsers();
+                } else {
+                    showError('ไม่สามารถโหลดข้อมูลผู้ใช้ได้');
+                }
+            } catch (error) {
+                console.error('Error loading users:', error);
+                showError('เกิดข้อผิดพลาดในการโหลดข้อมูล');
+            }
+        }
+
+        // ฟังก์ชันแสดงข้อมูลผู้ใช้
+        function displayUsers() {
+            const tbody = document.getElementById('usersTableBody');
+            tbody.innerHTML = '';
+
+            users.forEach(user => {
+                const role = roles.find(r => r.id === user.role_id);
+                const roleName = role ? role.name : 'ไม่ระบุ';
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${user.id}</td>
+                    <td>${user.username}</td>
+                    <td>${user.full_name}</td>
+                    <td>${user.email}</td>
+                    <td>${roleName}</td>
+                    <td>
+                        <span class="status ${user.is_active ? 'active' : 'inactive'}">
+                            ${user.is_active ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}
+                        </span>
+                    </td>
+                    <td>${new Date(user.created_at).toLocaleDateString('th-TH')}</td>
+                    <td>
+                        <button class="btn btn-sm btn-info" onclick="editUser(${user.id})">แก้ไข</button>
+                        ${user.id !== currentUser.id ? `<button class="btn btn-sm btn-danger" onclick="deleteUser(${user.id})">ลบ</button>` : ''}
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // ฟังก์ชันแสดง Modal เพิ่มผู้ใช้
+        function showAddUserModal() {
+            document.getElementById('modalTitle').textContent = 'เพิ่มผู้ใช้ใหม่';
+            document.getElementById('userForm').reset();
+            document.getElementById('userId').value = '';
+            document.getElementById('password').required = true;
+            document.getElementById('userModal').style.display = 'block';
+        }
+
+        // ฟังก์ชันปิด Modal
+        function closeUserModal() {
+            document.getElementById('userModal').style.display = 'none';
+        }
+
+        // ฟังก์ชันแก้ไขผู้ใช้
+        function editUser(userId) {
+            const user = users.find(u => u.id === userId);
+            if (!user) return;
+
+            document.getElementById('modalTitle').textContent = 'แก้ไขข้อมูลผู้ใช้';
+            document.getElementById('userId').value = user.id;
+            document.getElementById('username').value = user.username;
+            document.getElementById('password').value = '';
+            document.getElementById('password').required = false;
+            document.getElementById('full_name').value = user.full_name;
+            document.getElementById('email').value = user.email;
+            document.getElementById('role_id').value = user.role_id;
+            document.getElementById('is_active').value = user.is_active ? '1' : '0';
+            document.getElementById('userModal').style.display = 'block';
+        }
+
+        // ฟังก์ชันลบผู้ใช้
+        async function deleteUser(userId) {
+            if (!confirm('คุณต้องการลบผู้ใช้นี้หรือไม่?')) return;
+
+            try {
+                const response = await fetch(`/api/users/${userId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('token')
+                    }
+                });
+
+                if (response.ok) {
+                    showSuccess('ลบผู้ใช้สำเร็จ');
+                    loadUsers();
+                } else {
+                    const data = await response.json();
+                    showError(data.message || 'ไม่สามารถลบผู้ใช้ได้');
+                }
+            } catch (error) {
+                console.error('Error deleting user:', error);
+                showError('เกิดข้อผิดพลาดในการลบข้อมูล');
+            }
+        }
+
+        // Event listener สำหรับ form
+        document.getElementById('userForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const formData = new FormData(e.target);
+            const userData = {
+                username: formData.get('username'),
+                full_name: formData.get('full_name'),
+                email: formData.get('email'),
+                role_id: parseInt(formData.get('role_id')),
+                is_active: formData.get('is_active') === '1'
+            };
+
+            // เพิ่มรหัสผ่านถ้าไม่ใช่การแก้ไขหรือมีการกรอกรหัสผ่านใหม่
+            const password = formData.get('password');
+            if (password) {
+                userData.password = password;
+            }
+
+            const userId = formData.get('user_id');
+            const isEdit = userId && userId !== '';
+
+            try {
+                const response = await fetch(isEdit ? `/api/users/${userId}` : '/api/auth/register', {
+                    method: isEdit ? 'PUT' : 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + localStorage.getItem('token')
+                    },
+                    body: JSON.stringify(userData)
+                });
+
+                if (response.ok) {
+                    showSuccess(isEdit ? 'อัพเดตข้อมูลสำเร็จ' : 'เพิ่มผู้ใช้สำเร็จ');
+                    closeUserModal();
+                    loadUsers();
+                } else {
+                    const data = await response.json();
+                    showError(data.message || 'เกิดข้อผิดพลาด');
+                }
+            } catch (error) {
+                console.error('Error saving user:', error);
+                showError('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+            }
+        });
+
+        // ฟังก์ชัน logout
+        function logout() {
+            if (confirm('คุณต้องการออกจากระบบหรือไม่?')) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                window.location.href = '/login';
+            }
+        }
+
+        // ปิด modal เมื่อคลิกนอก modal
+        window.addEventListener('click', function(event) {
+            const modal = document.getElementById('userModal');
+            if (event.target === modal) {
+                closeUserModal();
+            }
+        });
+    </script>
+</body>
+</html>

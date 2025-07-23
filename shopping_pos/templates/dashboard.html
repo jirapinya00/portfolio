@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POS System - แดชบอร์ด</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="header">
+        <nav class="nav">
+            <div class="logo">POS System</div>
+            <ul class="nav-links">
+                <li><a href="/dashboard">แดชบอร์ด</a></li>
+                <li><a href="/pos">ขายสินค้า</a></li>
+                <li><a href="/products">จัดการสินค้า</a></li>
+                <li><a href="/reports">รายงาน</a></li>
+                <li><a href="/sales">ประวัติการขาย</a></li>
+                <li><a href="/users" id="users-link" class="hidden">จัดการผู้ใช้</a></li>
+                <li><a href="/settings" id="settings-link" class="hidden">ตั้งค่า</a></li>
+            </ul>
+            <div class="user-info">
+                <span id="user-name">ผู้ใช้</span>
+                <button class="btn btn-secondary btn-small" onclick="logout()">ออกจากระบบ</button>
+            </div>
+        </nav>
+    </div>
+
+    <div class="container">
+        <div class="card-header">
+            <h1 class="card-title">แดชบอร์ด</h1>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <span class="stat-value" id="today-sales">0</span>
+                <div class="stat-label">ยอดขายวันนี้ (บาท)</div>
+            </div>
+            <div class="stat-card">
+                <span class="stat-value" id="today-transactions">0</span>
+                <div class="stat-label">จำนวนรายการวันนี้</div>
+            </div>
+            <div class="stat-card">
+                <span class="stat-value" id="total-products">0</span>
+                <div class="stat-label">จำนวนสินค้า</div>
+            </div>
+            <div class="stat-card">
+                <span class="stat-value" id="low-stock">0</span>
+                <div class="stat-label">สินค้าใกล้หมด</div>
+            </div>
+        </div>
+
+        <div class="grid grid-2">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">ยอดขายรายวัน (7 วันล่าสุด)</h2>
+                </div>
+                <div id="sales-chart">
+                    <canvas id="salesCanvas" width="400" height="200"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">การขายล่าสุด</h2>
+                </div>
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>เวลา</th>
+                                <th>ลูกค้า</th>
+                                <th>ยอดรวม</th>
+                                <th>สถานะ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recent-sales">
+                            <tr>
+                                <td colspan="4" class="text-center">กำลังโหลด...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">สินค้าขายดี (วันนี้)</h2>
+            </div>
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>ชื่อสินค้า</th>
+                            <th>จำนวนที่ขาย</th>
+                            <th>ยอดขาย</th>
+                            <th>คงเหลือ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="top-products">
+                        <tr>
+                            <td colspan="4" class="text-center">กำลังโหลด...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+
+        // Authentication check
+        function checkAuth() {
+            const token = localStorage.getItem('pos_token');
+            const user = localStorage.getItem('pos_user');
+            
+            if (!token || !user) {
+                window.location.href = '/';
+                return false;
+            }
+            
+            try {
+                currentUser = JSON.parse(user);
+                document.getElementById('user-name').textContent = currentUser.username;
+                
+                // Show admin/manager links
+                if (currentUser.role === 'admin') {
+                    document.getElementById('users-link').classList.remove('hidden');
+                    document.getElementById('settings-link').classList.remove('hidden');
+                } else if (currentUser.role === 'manager') {
+                    document.getElementById('settings-link').classList.remove('hidden');
+                }
+                
+                return true;
+            } catch (error) {
+                console.error('Error parsing user data:', error);
+                logout();
+                return false;
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('pos_token');
+            localStorage.removeItem('pos_user');
+            window.location.href = '/';
+        }
+
+        // API helper
+        async function apiCall(url, options = {}) {
+            const token = localStorage.getItem('pos_token');
+            const defaultOptions = {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            };
+            
+            const response = await fetch(url, { ...defaultOptions, ...options });
+            
+            if (response.status === 401) {
+                logout();
+                return null;
+            }
+            
+            return response.json();
+        }
+
+        // Load dashboard data
+        async function loadDashboardData() {
+            try {
+                // Get today's date range
+                const today = new Date();
+                const startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();
+                const endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1).toISOString();
+                
+                // Load sales report for today
+                const salesData = await apiCall(`/api/reports/sales?start_date=${startDate}&end_date=${endDate}`);
+                if (salesData?.success) {
+                    document.getElementById('today-sales').textContent = salesData.summary.total_sales.toLocaleString();
+                    document.getElementById('today-transactions').textContent = salesData.summary.total_transactions;
+                }
+
+                // Load products
+                const productsData = await apiCall('/api/products');
+                if (productsData?.success) {
+                    const totalProducts = productsData.products.length;
+                    const lowStock = productsData.products.filter(p => p.stock_quantity < 10).length;
+                    
+                    document.getElementById('total-products').textContent = totalProducts;
+                    document.getElementById('low-stock').textContent = lowStock;
+                }
+
+                // Load recent sales
+                const recentSales = await apiCall('/api/sales?page=1');
+                if (recentSales?.success) {
+                    updateRecentSalesTable(recentSales.sales.slice(0, 5));
+                }
+
+                // Load 7-day sales chart
+                await loadSalesChart();
+                
+            } catch (error) {
+                console.error('Error loading dashboard data:', error);
+            }
+        }
+
+        function updateRecentSalesTable(sales) {
+            const tbody = document.getElementById('recent-sales');
+            
+            if (sales.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center">ไม่มีข้อมูลการขาย</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = sales.map(sale => `
+                <tr>
+                    <td>${new Date(sale.sale_date).toLocaleString('th-TH')}</td>
+                    <td>${sale.customer_name}</td>
+                    <td class="text-right">${sale.total_amount.toLocaleString()} บาท</td>
+                    <td>
+                        <span class="badge ${sale.status === 'completed' ? 'badge-success' : 'badge-warning'}">
+                            ${sale.status === 'completed' ? 'สำเร็จ' : 'รอดำเนินการ'}
+                        </span>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function loadSalesChart() {
+            try {
+                // Get last 7 days data
+                const endDate = new Date();
+                const startDate = new Date();
+                startDate.setDate(startDate.getDate() - 6);
+                
+                const salesData = await apiCall(`/api/reports/sales?start_date=${startDate.toISOString()}&end_date=${endDate.toISOString()}`);
+                
+                if (salesData?.success) {
+                    drawSalesChart(salesData.daily_sales);
+                }
+            } catch (error) {
+                console.error('Error loading sales chart:', error);
+            }
+        }
+
+        function drawSalesChart(dailySales) {
+            const canvas = document.getElementById('salesCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            if (dailySales.length === 0) {
+                ctx.fillStyle = '#64748b';
+                ctx.font = '16px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('ไม่มีข้อมูลการขาย', canvas.width / 2, canvas.height / 2);
+                return;
+            }
+            
+            // Prepare data
+            const maxValue = Math.max(...dailySales.map(d => d.total));
+            const padding = 40;
+            const chartWidth = canvas.width - padding * 2;
+            const chartHeight = canvas.height - padding * 2;
+            
+            // Draw bars
+            const barWidth = chartWidth / dailySales.length;
+            
+            dailySales.forEach((day, index) => {
+                const barHeight = (day.total / maxValue) * chartHeight;
+                const x = padding + index * barWidth;
+                const y = padding + chartHeight - barHeight;
+                
+                // Draw bar
+                ctx.fillStyle = '#667eea';
+                ctx.fillRect(x + 5, y, barWidth - 10, barHeight);
+                
+                // Draw value
+                ctx.fillStyle = '#1e293b';
+                ctx.font = '12px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(
+                    day.total.toLocaleString(),
+                    x + barWidth / 2,
+                    y - 5
+                );
+                
+                // Draw date
+                const date = new Date(day.date);
+                ctx.fillText(
+                    `${date.getDate()}/${date.getMonth() + 1}`,
+                    x + barWidth / 2,
+                    padding + chartHeight + 20
+                );
+            });
+        }
+
+        // Initialize page
+        if (checkAuth()) {
+            loadDashboardData();
+        }
+    </script>
+</body>
+</html>

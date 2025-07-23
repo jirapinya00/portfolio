@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POS Dashboard - ระบบหลังบ้าน</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            overflow-x: hidden;
+        }
+
+        .dashboard-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+            border-right: 1px solid rgba(255, 255, 255, 0.18);
+            transition: all 0.3s ease;
+        }
+
+        .sidebar-header {
+            padding: 30px 25px;
+            text-align: center;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .sidebar-header h2 {
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+        }
+
+        .sidebar-header p {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .nav-menu {
+            padding: 20px 0;
+        }
+
+        .nav-item {
+            margin: 5px 15px;
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .nav-item:hover {
+            transform: translateX(5px);
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 15px 20px;
+            color: #555;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .nav-link i {
+            font-size: 1.2rem;
+            width: 30px;
+            margin-right: 15px;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            padding: 30px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px 25px;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+            backdrop-filter: blur(20px);
+        }
+
+        .welcome-text h1 {
+            font-size: 2rem;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(20px);
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(31, 38, 135, 0.5);
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+
+        .stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .stat-title {
+            font-size: 0.9rem;
+            color: #666;
+            font-weight: 600;
+        }
+
+        .stat-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .stat-change {
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .stat-change.positive {
+            color: #27ae60;
+        }
+
+        .stat-change.negative {
+            color: #e74c3c;
+        }
+
+        /* Content Sections */
+        .content-section {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 25px;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            background-clip: text;
+           -webkit-background-clip: text;
+           -webkit-text-fill-color: transparent;
+        }
+
+        /* Tables */
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .table th,
+        .table td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        .table th {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            font-weight: 600;
+            color: #555;
+        }
+
+        .table tr:hover {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        /* Charts Container */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .chart-container {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            height: 400px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chart-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #555;
+        }
+
+        .chart-placeholder {
+            flex: 1;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            font-size: 1.1rem;
+            border: 2px dashed #ccc;
+        }
+
+        /* Form Styles */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e1e8ed;
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background: white;
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover {
+            color: #000;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 250px;
+                transform: translateX(-100%);
+                position: fixed;
+                z-index: 999;
+                height: 100vh;
+            }
+
+            .sidebar.active {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                padding: 20px;
+            }
+
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Animation Classes */
+        .fade-in {
+            animation: fadeIn 0.6s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Loading Spinner */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .status-active {
+            background: rgba(39, 174, 96, 0.2);
+            color: #27ae60;
+        }
+
+        .status-inactive {
+            background: rgba(231, 76, 60, 0.2);
+            color: #e74c3c;
+        }
+
+        .status-low-stock {
+            background: rgba(230, 126, 34, 0.2);
+            color: #e67e22;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2><i class="fas fa-cash-register"></i> POS System</h2>
+                <p>ระบบหลังบ้าน</p>
+            </div>
+            
+            <nav class="nav-menu">
+                <div class="nav-item">
+                    <a href="#dashboard" class="nav-link active" onclick="showSection('dashboard')">
+                        <i class="fas fa-tachometer-alt"></i>
+                        แดชบอร์ด
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="#products" class="nav-link" onclick="showSection('products')">
+                        <i class="fas fa-box"></i>
+                        จัดการสินค้า
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="#sales" class="nav-link" onclick="showSection('sales')">
+                        <i class="fas fa-shopping-cart"></i>
+                        ขายสินค้า
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="#reports" class="nav-link" onclick="showSection('reports')">
+                        <i class="fas fa-chart-bar"></i>
+                        รายงาน
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="#users" class="nav-link" onclick="showSection('users')">
+                        <i class="fas fa-users"></i>
+                        จัดการผู้ใช้
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="#customers" class="nav-link" onclick="showSection('customers')">
+                        <i class="fas fa-user-friends"></i>
+                        ลูกค้า
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="#inventory" class="nav-link" onclick="showSection('inventory')">
+                        <i class="fas fa-warehouse"></i>
+                        คลังสินค้า
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="#settings" class="nav-link" onclick="showSection('settings')">
+                        <i class="fas fa-cog"></i>
+                        ตั้งค่า
+                    </a>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Top Bar -->
+            <div class="top-bar">
+                <div class="welcome-text">
+                    <h1>ยินดีต้อนรับ, Admin</h1>
+                    <p id="current-time"></p>
+                </div>
+                <div class="user-info">
+                    <div class="user-avatar">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div>
+                        <strong>Admin User</strong>
+                        <br>
+                        <small style="color: #666;">ผู้ดูแลระบบ</small>
+                    </div>
+                    <button class="btn btn-danger" onclick="logout()">
+                        <i class="fas fa-sign-out-alt"></i>
+                        ออกจากระบบ
+                    </button>
+                </div>
+            </div>
+
+            <!-- Dashboard Section -->
+            <div id="dashboard-content" class="section-content fade-in">
+                <!-- Stats Cards -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <span class="stat-title">ยอดขายวันนี้</span>
+                            <div class="stat-icon" style="background: linear-gradient(135deg, #27ae60, #2ecc71);">
+                                <i class="fas fa-dollar-sign"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value" id="today-sales">฿12,450</div>
+                        <div class="stat-change positive">
+                            <i class="fas fa-arrow-up"></i>
+                            +15.3% จากเมื่อวาน
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <span class="stat-title">จำนวนการขาย</span>
+                            <div class="stat-icon" style="background: linear-gradient(135deg, #3498db, #74b9ff);">
+                                <i class="fas fa-shopping-bag"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value" id="transactions-count">156</div>
+                        <div class="stat-change positive">
+                            <i class="fas fa-arrow-up"></i>
+                            +8.2% จากเมื่อวาน
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <span class="stat-title">จำนวนสินค้า</span>
+                            <div class="stat-icon" style="background: linear-gradient(135deg, #e67e22, #f39c12);">
+                                <i class="fas fa-boxes"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value" id="products-count">1,234</div>
+                        <div class="stat-change negative">
+                            <i class="fas fa-arrow-down"></i>
+                            -2 รายการ
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <span class="stat-title">สินค้าใกล้หมด</span>
+                            <div class="stat-icon" style="background: linear-gradient(135deg, #e74c3c, #c0392b);">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value" id="low-stock-count">23</div>
+                        <div class="stat-change negative">
+                            <i class="fas fa-arrow-up"></i>
+                            ต้องเติมสต๊อก
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts -->
+                <div class="charts-grid">
+                    <div class="chart-container">
+                        <h3 class="chart-title">กราฟยอดขาย 7 วันที่ผ่านมา</h3>
+                        <div class="chart-placeholder">
+                            <i class="fas fa-chart-line" style="font-size: 3rem; opacity: 0.3;"></i>
+                            <span style="margin-left: 15px;">กราฟยอดขายรายวัน</span>
+                        </div>
+                    </div>
+
+                    <div class="chart-container">
+                        <h3 class="chart-title">สินค้าขายดี Top 5</h3>
+                        <div class="chart-placeholder">
+                            <i class="fas fa-chart-pie" style="font-size: 3rem; opacity: 0.3;"></i>
+                            <span style="margin-left: 15px;">กราฟวงกลม</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Activities -->
+                <div class="content-section">
+                    <div class="section-header">
+                        <h3 class="section-title">กิจกรรมล่าสุด</h3>
+                        <button class="btn btn-primary" onclick="refreshActivities()">
+                            <i class="fas fa-refresh"></i>
+                            รีเฟรช
+                        </button>
+                    </div>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>เวลา</th>
+                                <th>ผู้ใช้</th>
+                                <th>กิจกรรม</th>
+                                <th>รายละเอียด</th>
+                            </tr>
+                        </thead>
+                        <tbody id="activities-table">
+                            <tr>
+                                <td>14:30</td>
+                                <td>พนักงาน A</td>
+                                <td><span class="status-badge status-active">ขายสินค้า</span></td>
+                                <td>ขายสินค้ารวม ฿850</td>
+                            </tr>
+                            <tr>
+                                <td>14:25</td>
+                                <td>Admin</td>
+                                <td><span class="status-badge status-low-stock">อัปเดตสต๊อก</span></td>
+                                <td>เพิ่มสินค้า "เสื้อยืด" 50 ตัว</td>
+                            </tr>
+                            <tr>
+                                <td>14:20</td>
+                                <td>พนักงาน B</td>
+                                <td><span class="status-badge status-active">ขายสินค้า</span></td>
+                                <td>ขายสินค้ารวม ฿1,250</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Products Section -->
+            <div id="products-content" class="section-content" style="display: none;">
+                <div class="content-section">
+                    <div class="section-header">
+                        <h3 class="section-title">จัดการสินค้า</h3>
+                        <button class="btn btn-primary" onclick="showAddProductModal()">
+                            <i class="fas fa-plus"></i>
+                            เพิ่มสินค้า
+                        </button>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <input type="text" class="form-control" placeholder="ค้นหาสินค้า..." style="max-width: 300px;" onkeyup="searchProducts(this.value)">
+                    </div>
+
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>รหัสสินค้า</th>
+                                <th>ชื่อสินค้า</th>
+                                <th>หมวดหมู่</th>
+                                <th>ราคา</th>
+                                <th>สต๊อก</th>
+                                <th>สถานะ</th>
+                                <th>จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="products-table">
+                            <tr>
+                                <td>P001</td>
+                                <td>เสื้อยืดสีขาว</td>
+                                <td>เสื้อผ้า</td>
+                                <td>฿299</td>
+                                <td>45</td>
+                                <td><span class="status-badge status-active">ปกติ</span></td>
+                                <td>
+                                    <button class="btn" style="padding: 5px 10px; background: #3498db; color: white; margin-right: 5px;">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn" style="padding: 5px 10px; background: #e74c3c; color: white;">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>P002</td>
+                                <td>กางเกงยีนส์</td>
+                                <td>เสื้อผ้า</td>
+                                <td>฿899</td>
+                                <td>5</td>
+                                <td><span class="status-badge status-low-stock">ใกล้หมด</span></td>
+                                <td>
+                                    <button class="btn" style="padding: 5px 10px; background: #3498db; color: white; margin-right: 5px;">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn" style="padding: 5px 10px; background: #e74c3c; color: white;">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Sales Section -->
+            <div id="sales-content" class="section-content" style="display: none;">
+                <div class="content-section">
+                    <div class="section-header">
+                        <h3 class="section-title">ขายสินค้า</h3>
+                        <button class="btn btn-primary" onclick="startNewSale()">
+                            <i class="fas fa-plus"></i>
+                            เริ่มการขายใหม่
+                        </button>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 30px;">
+                        <!-- Product Selection -->
+                        <div>
+                            <h4>เลือกสินค้า</h4>
+                            <input type="text" class="form-control" placeholder="สแกนบาร์โค้ดหรือค้นหาสินค้า..." style="margin-bottom: 15px;">
+                            
+                            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; max-height: 400px; overflow-y: auto;">
+                                <!-- Product Cards -->
+                                <div class="stat-card" style="cursor: pointer; text-align: center; padding: 15px;" onclick="addToCart('P001', 'เสื้อยืดสีขาว', 299)">
+                                    <i class="fas fa-tshirt" style="font-size: 2rem; color: #667eea; margin-bottom: 10px;"></i>
+                                    <div style="font-size: 0.9rem; font-weight: 600;">เสื้อยืดสีขาว</div>
+                                    <div style="color: #e74c3c; font-weight: 700;">฿299</div>
+                                </div>
+                                
+                                <div class="stat-card" style="cursor: pointer; text-align: center; padding: 15px;" onclick="addToCart('P002', 'กางเกงยีนส์', 899)">
+                                    <i class="fas fa-vest" style="font-size: 2rem; color: #667eea; margin-bottom: 10px;"></i>
+                                    <div style="font-size: 0.9rem; font-weight: 600;">กางเกงยีนส์</div>
+                                    <div style="color: #e74c3c; font-weight: 700;">฿899</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Shopping Cart -->
+                        <div>
+                            <h4>รายการสินค้า</h4>
+                            <div class="stat-card" style="padding: 20px; min-height: 400px;">
+                                <div id="cart-items" style="margin-bottom: 20px;">
+                                    <!-- Cart items will be added here -->
+                                </div>
+                                
+                                <div style="border-top: 2px soli">d #eee; padding-top: 15px;">
+                                    <div style="display: flex; justify-content: space-between; font-weight: 600;">
+                                        <span>ยอดรวม</span>
+                                        <span id="cart-total">฿0</span>
+                                    </div>
+                                    <button class="btn btn-primary" style="margin-top: 15px; width: 100%;" onclick="completeSale()">
+                                        <i class="fas fa-check"></i>
+                                        เสร็จสิ้นการขาย
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>      
