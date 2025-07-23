@@ -2,33 +2,49 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <title>แดชบอร์ด</title>
+  <title>แดชบอร์ด - ระบบจัดการ</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="{{ url_for('static', filename='js/user.js') }}"></script>
-
 </head>
 <body class="dashboard">
   <nav class="navbar">
     <div class="navbar-content">
-      <a class="navbar-brand" href="#">My POS</a>
+      <a class="navbar-brand" href="#">🏪 POS Admin</a>
       <ul class="navbar-nav">
         <li><a href="/dashboard" class="active">แดชบอร์ด</a></li>
-        <li><a href="/pos">ขายสินค้า</a></li>
-        <li><a href="/products">สินค้า</a></li>
-        <li><a href="/reports">รายงาน</a></li>
-        <li><a href="/settings">ตั้งค่า</a></li>
+        <li><a href="/pos">ขายสินค้า (POS)</a></li>
+        <li><a href="/products">จัดการสินค้า</a></li>
+        <li><a href="/sales-history">ประวัติการขาย</a></li>
+        <li id="reportsMenu"><a href="/reports">รายงาน</a></li>
+        <li id="usersMenu"><a href="/users">จัดการผู้ใช้</a></li>
+        <li id="settingsMenu"><a href="/settings">ตั้งค่า</a></li>
+        <li><a href="/" target="_blank">🛍️ ดูหน้าร้าน</a></li>
       </ul>
       <div class="user-info">
+        <span id="userRole" class="user-role"></span>
         <span id="userName">...</span>
         <button class="logout-btn" onclick="logout()">ออกจากระบบ</button>
       </div>
     </div>
   </nav>
 
-  <main class="main-content">
+  <!-- Access Denied Message -->
+  <div id="accessDenied" class="access-denied" style="display: none;">
+    <div class="access-denied-content">
+      <h2>🚫 ไม่มีสิทธิ์เข้าถึง</h2>
+      <p>คุณไม่มีสิทธิ์เข้าถึงระบบจัดการ</p>
+      <p>หน้านี้สำหรับ Admin, Manager และ Staff เท่านั้น</p>
+      <div class="access-denied-actions">
+        <button onclick="goToStore()" class="btn btn-primary">ไปหน้าร้าน</button>
+        <button onclick="logout()" class="btn btn-outline">ออกจากระบบ</button>
+      </div>
+    </div>
+  </div>
+
+  <main class="main-content" id="mainContent">
     <div class="page-header">
-      <h1>แดชบอร์ด</h1>
+      <h1>แดชบอร์ด - ระบบจัดการ</h1>
       <p>ภาพรวมข้อมูลระบบของคุณ</p>
     </div>
 
@@ -57,41 +73,443 @@
         <div class="card-value" id="totalUsers">0</div>
         <div class="card-subtitle">คน</div>
       </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">การขายวันนี้</div>
+          <div class="card-icon">📈</div>
+        </div>
+        <div class="card-value" id="todaySales">0</div>
+        <div class="card-subtitle">บาท</div>
+      </div>
+    </div>
+
+    <!-- Role-based Content -->
+    <div class="dashboard-sections">
+      <!-- Quick Actions Section -->
+      <section class="dashboard-section">
+        <h2>การดำเนินการด่วน</h2>
+        <div class="quick-actions">
+          <button class="quick-action-btn" onclick="window.location.href='/pos'">
+            <div class="quick-action-icon">🛒</div>
+            <div class="quick-action-text">ขายสินค้า</div>
+          </button>
+          <button class="quick-action-btn" onclick="window.location.href='/products'" id="manageProductsBtn">
+            <div class="quick-action-icon">📦</div>
+            <div class="quick-action-text">จัดการสินค้า</div>
+          </button>
+          <button class="quick-action-btn" onclick="window.location.href='/sales-history'">
+            <div class="quick-action-icon">📋</div>
+            <div class="quick-action-text">ประวัติการขาย</div>
+          </button>
+          <button class="quick-action-btn" onclick="window.open('/', '_blank')">
+            <div class="quick-action-icon">🛍️</div>
+            <div class="quick-action-text">ดูหน้าร้าน</div>
+          </button>
+        </div>
+      </section>
+
+      <!-- Recent Activities (for all roles) -->
+      <section class="dashboard-section">
+        <h2>กิจกรรมล่าสุด</h2>
+        <div id="recentActivities" class="recent-activities">
+          <div class="activity-loading">กำลังโหลด...</div>
+        </div>
+      </section>
     </div>
   </main>
 
   <script>
-    const token = localStorage.getItem('access_token');
-    if (!token) {
-      window.location.href = "/login";
+    let currentUser = null;
+    let userPermissions = null;
+
+    // ตรวจสอบการเข้าถึงและโหลดข้อมูล
+    document.addEventListener('DOMContentLoaded', function() {
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        window.location.href = "/login";
+        return;
+      }
+
+      // ตรวจสอบ profile และ role
+      Promise.all([
+        fetch('/api/auth/profile', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        }),
+        fetch('/api/auth/check-role', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        })
+      ])
+      .then(responses => Promise.all(responses.map(r => r.json())))
+      .then(([profileData, roleData]) => {
+        currentUser = profileData.user;
+        userPermissions = roleData.permissions;
+
+        // ตรวจสอบสิทธิ์เข้าถึงระบบจัดการ
+        if (!userPermissions.can_access_dashboard) {
+          showAccessDenied();
+          return;
+        }
+
+        // แสดงข้อมูลผู้ใช้
+        showUserInterface();
+        
+        // ปรับเมนูตาม role
+        adjustMenuByRole();
+        
+        // โหลดข้อมูล dashboard
+        loadDashboardData();
+        loadRecentActivities();
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        localStorage.removeItem('access_token');
+        window.location.href = "/login";
+      });
+    });
+
+    function showAccessDenied() {
+      document.getElementById('accessDenied').style.display = 'flex';
+      document.getElementById('mainContent').style.display = 'none';
+      document.querySelector('.navbar').style.display = 'none';
     }
 
-    fetch('/api/auth/profile', {
-      headers: {
-        'Authorization': 'Bearer ' + token
-      }
-    })
-    .then(res => res.json())
-    .then(data => {
-      document.getElementById("userName").innerText = data.user.username;
-    });
+    function showUserInterface() {
+      document.getElementById("userName").textContent = currentUser.username;
+      document.getElementById("userRole").textContent = getRoleDisplayName(currentUser.role);
+    }
 
-    fetch('/api/reports/dashboard-stats', {
-      headers: {
-        'Authorization': 'Bearer ' + token
+    function getRoleDisplayName(role) {
+      const roleNames = {
+        'admin': '👑 Admin',
+        'manager': '👔 Manager',
+        'staff': '👨‍💼 Staff',
+        'user': '👤 User'
+      };
+      return roleNames[role] || role;
+    }
+
+    function adjustMenuByRole() {
+      // ซ่อนเมนูที่ไม่มีสิทธิ์
+      if (!userPermissions.can_manage_users) {
+        document.getElementById('usersMenu').style.display = 'none';
       }
-    })
-    .then(res => res.json())
-    .then(data => {
-      document.getElementById("totalSales").innerText = data.total_sales;
-      document.getElementById("totalProducts").innerText = data.total_products;
-      document.getElementById("totalUsers").innerText = data.total_users;
-    });
+      
+      if (!userPermissions.can_view_reports) {
+        document.getElementById('reportsMenu').style.display = 'none';
+      }
+      
+      if (currentUser.role === 'staff') {
+        document.getElementById('settingsMenu').style.display = 'none';
+      }
+
+      // ปรับปุ่ม quick actions
+      if (!userPermissions.can_manage_products) {
+        document.getElementById('manageProductsBtn').style.display = 'none';
+      }
+    }
+
+    function loadDashboardData() {
+      fetch('/api/reports/dashboard-stats', {
+        headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
+      })
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById("totalSales").textContent = Number(data.total_sales || 0).toLocaleString();
+        document.getElementById("totalProducts").textContent = data.total_products || 0;
+        document.getElementById("totalUsers").textContent = data.total_users || 0;
+        document.getElementById("todaySales").textContent = Number(data.today_sales || 0).toLocaleString();
+      })
+      .catch(error => {
+        console.error('Error loading dashboard stats:', error);
+      });
+    }
+
+    function loadRecentActivities() {
+      // Simulate recent activities - ในการใช้งานจริงจะดึงจาก API
+      const activities = [
+        { time: '10:30', action: 'มีการขายสินค้า', detail: 'ขายสินค้า 3 รายการ มูลค่า 450 บาท' },
+        { time: '10:15', action: 'เพิ่มสินค้าใหม่', detail: 'เพิ่มสินค้า "กาแฟเย็น" เข้าระบบ' },
+        { time: '09:45', action: 'ผู้ใช้ใหม่สมัครสมาชิک', detail: 'มีผู้ใช้ใหม่ 1 คน' },
+        { time: '09:30', action: 'อัพเดทสต็อกสินค้า', detail: 'ปรับสต็อกสินค้าหลายรายการ' }
+      ];
+
+      const container = document.getElementById('recentActivities');
+      container.innerHTML = '';
+
+      activities.forEach(activity => {
+        const activityElement = document.createElement('div');
+        activityElement.className = 'activity-item';
+        activityElement.innerHTML = `
+          <div class="activity-time">${activity.time}</div>
+          <div class="activity-content">
+            <div class="activity-action">${activity.action}</div>
+            <div class="activity-detail">${activity.detail}</div>
+          </div>
+        `;
+        container.appendChild(activityElement);
+      });
+    }
+
+    function goToStore() {
+      window.location.href = '/';
+    }
 
     function logout() {
       localStorage.removeItem("access_token");
+      localStorage.removeItem("user_data");
       window.location.href = "/login";
     }
   </script>
-</body>
-</html>
+
+  <style>
+    /* Dashboard Styles */
+    .dashboard {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: #f5f7fa;
+    }
+
+    .navbar {
+      background: white;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .navbar-content {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem;
+    }
+
+    .navbar-brand {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #333;
+      text-decoration: none;
+    }
+
+    .navbar-nav {
+      display: flex;
+      list-style: none;
+      gap: 2rem;
+      margin: 0;
+      padding: 0;
+    }
+
+    .navbar-nav a {
+      text-decoration: none;
+      color: #666;
+      font-weight: 500;
+      padding: 0.5rem 1rem;
+      border-radius: 5px;
+      transition: all 0.3s;
+    }
+
+    .navbar-nav a:hover,
+    .navbar-nav a.active {
+      background: #667eea;
+      color: white;
+    }
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .user-role {
+      font-size: 0.9rem;
+      padding: 0.25rem 0.75rem;
+      background: #e3f2fd;
+      color: #1976d2;
+      border-radius: 15px;
+      font-weight: 500;
+    }
+
+    .logout-btn {
+      padding: 0.5rem 1rem;
+      background: #ff4757;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: background 0.3s;
+    }
+
+    .logout-btn:hover {
+      background: #ff3742;
+    }
+
+    .main-content {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    .page-header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+
+    .page-header h1 {
+      color: #333;
+      margin-bottom: 0.5rem;
+    }
+
+    .page-header p {
+      color: #666;
+      font-size: 1.1rem;
+    }
+
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 2rem;
+      margin-bottom: 3rem;
+    }
+
+    .card {
+      background: white;
+      border-radius: 15px;
+      padding: 2rem;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+      transition: transform 0.3s;
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .card-title {
+      font-weight: 600;
+      color: #333;
+    }
+
+    .card-icon {
+      font-size: 2rem;
+    }
+
+    .card-value {
+      font-size: 2.5rem;
+      font-weight: bold;
+      color: #667eea;
+      margin-bottom: 0.5rem;
+    }
+
+    .card-subtitle {
+      color: #666;
+      font-size: 0.9rem;
+    }
+
+    .dashboard-sections {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 2rem;
+    }
+
+    .dashboard-section {
+      background: white;
+      border-radius: 15px;
+      padding: 2rem;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+    }
+
+    .dashboard-section h2 {
+      color: #333;
+      margin-bottom: 1.5rem;
+      font-size: 1.5rem;
+    }
+
+    .quick-actions {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 1rem;
+    }
+
+    .quick-action-btn {
+      background: #f8f9ff;
+      border: 2px solid #e3f2fd;
+      border-radius: 10px;
+      padding: 1.5rem;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.3s;
+    }
+
+    .quick-action-btn:hover {
+      background: #667eea;
+      color: white;
+      transform: translateY(-3px);
+    }
+
+    .quick-action-icon {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .quick-action-text {
+      font-weight: 500;
+      font-size: 0.9rem;
+    }
+
+    .recent-activities {
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .activity-item {
+      display: flex;
+      gap: 1rem;
+      padding: 1rem 0;
+      border-bottom: 1px solid #eee;
+    }
+
+    .activity-item:last-child {
+      border-bottom: none;
+    }
+
+    .activity-time {
+      font-weight: 500;
+      color: #667eea;
+      min-width: 60px;
+    }
+
+    .activity-content {
+      flex: 1;
+    }
+
+    .activity-action {
+      font-weight: 500;
+      color: #333;
+      margin-bottom: 0.25rem;
+    }
+
+    .activity-detail {
+      color: #666;
+      font-size: 0.9rem;
+    }
+
+    .activity-loading {
+      text-align: center;
+      color: #666;
+      padding: 2rem;
+    }
+
+    /* Access Denied Styles */
+    .access-denied {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100

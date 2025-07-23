@@ -6,46 +6,58 @@
     <title>สมัครสมาชิก - POS System</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body class="login-page">
-    <div class="login-container">
-        <div class="login-card">
-            <div class="login-header">
+<body class="register-page">
+    <div class="register-container">
+        <div class="register-card">
+            <div class="register-header">
                 <h1>🏪 POS System</h1>
                 <p>สมัครสมาชิก</p>
             </div>
             
-            <form id="registerForm" class="login-form">
+            <form id="registerForm" class="register-form">
                 <div class="form-group">
                     <label for="username">ชื่อผู้ใช้</label>
                     <input type="text" id="username" name="username" required>
-                    <small>ใช้สำหรับเข้าสู่ระบบ</small>
+                    <small class="form-help">ใช้สำหรับเข้าสู่ระบบ (ภาษาอังกฤษและตัวเลขเท่านั้น)</small>
                 </div>
                 
                 <div class="form-group">
                     <label for="email">อีเมล</label>
                     <input type="email" id="email" name="email" required>
+                    <small class="form-help">สามารถใช้อีเมลเข้าสู่ระบบได้</small>
                 </div>
                 
                 <div class="form-group">
                     <label for="password">รหัสผ่าน</label>
-                    <input type="password" id="password" name="password" required>
-                    <small>อย่างน้อย 6 ตัวอักษร</small>
+                    <input type="password" id="password" name="password" required minlength="6">
+                    <small class="form-help">อย่างน้อย 6 ตัวอักษร</small>
                 </div>
                 
-                
-                 <div class="form-group">
+                <div class="form-group">
                     <label for="confirmPassword">ยืนยันรหัสผ่าน</label>
                     <input type="password" id="confirmPassword" name="confirmPassword" required>
                 </div>
-    
                 
-                <button type="submit" class="btn btn-primary btn-login">
+                <div class="role-info">
+                    <div class="info-box">
+                        <h3>📝 ข้อมูลการสมัครสมาชิก</h3>
+                        <ul>
+                            <li>✅ บัญชีใหม่จะได้รับสถานะ <strong>"ผู้ใช้ทั่วไป"</strong></li>
+                            <li>🛍️ สามารถเข้าใช้งานหน้าร้าน และสั่งซื้อสินค้าได้</li>
+                            <li>🚫 ไม่สามารถเข้าใช้งานระบบจัดการหลังบ้าน</li>
+                            <li>🔧 หากต้องการสิทธิ์ Admin/Staff ให้ติดต่อผู้ดูแลระบบ</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-register">
                     สมัครสมาชิก
                 </button>
             </form>
             
-            <div class="login-footer">
+            <div class="register-footer">
                 <p>มีบัญชีอยู่แล้ว? <a href="/login">เข้าสู่ระบบ</a></p>
+                <p><a href="/">กลับสู่หน้าหลัก</a></p>
             </div>
         </div>
     </div>
@@ -71,8 +83,32 @@
         document.addEventListener('DOMContentLoaded', function() {
             const token = localStorage.getItem('access_token');
             if (token) {
-                // ถ้ามี token แล้วให้ไปหน้า dashboard
-                window.location.href = '/dashboard';
+                // ตรวจสอบ token ว่ายังใช้ได้อยู่หรือไม่
+                fetch('/api/auth/profile', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => {
+                    if (response.ok) {
+                        return response.json();
+                    } else {
+                        throw new Error('Token expired');
+                    }
+                })
+                .then(data => {
+                    // Redirect based on role
+                    if (data.user.role === 'user') {
+                        window.location.href = '/';
+                    } else {
+                        window.location.href = '/dashboard';
+                    }
+                })
+                .catch(error => {
+                    localStorage.removeItem('access_token');
+                    localStorage.removeItem('user_data');
+                });
             }
         });
 
@@ -82,16 +118,10 @@
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
             const confirmPassword = document.getElementById('confirmPassword').value;
-            const roleId = 4;
             
             // ตรวจสอบข้อมูล
             if (!username || !email || !password || !confirmPassword) {
                 showAlert('กรุณากรอกข้อมูลให้ครบถ้วน', 'error');
-                return;
-            }
-            
-            if (password.length < 6) {
-                showAlert('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร', 'error');
                 return;
             }
             
@@ -100,41 +130,37 @@
                 return;
             }
             
-            // ตรวจสอบรูปแบบอีเมล
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(email)) {
-                showAlert('รูปแบบอีเมลไม่ถูกต้อง', 'error');
+            if (password.length < 6) {
+                showAlert('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร', 'error');
+                return;
+            }
+            
+            // ตรวจสอบ username (อนุญาตเฉพาะภาษาอังกฤษ ตัวเลข และ _ - เท่านั้น)
+            const usernamePattern = /^[a-zA-Z0-9_-]+$/;
+            if (!usernamePattern.test(username)) {
+                showAlert('ชื่อผู้ใช้สามารถใช้ได้เฉพาะภาษาอังกฤษ ตัวเลข และ _ - เท่านั้น', 'error');
                 return;
             }
             
             showLoading(true);
-
-
-            // ในฟังก์ชัน submitRegister() เปลี่ยนจาก:
-
-
-      
             
             fetch('/api/auth/register', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                 
-                    body: JSON.stringify({
-                        username: username,
-                        email: email,
-                        password: password,
-                        role_id: roleId  // จะเป็น 4 เสมอ
-                    })
-
+                body: JSON.stringify({
+                    username: username,
+                    email: email,
+                    password: password
+                })
             })
             .then(response => response.json())
             .then(data => {
                 showLoading(false);
                 
                 if (data.message === 'สมัครสมาชิกสำเร็จ') {
-                    showAlert('สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบ', 'success');
+                    showAlert('สมัครสมาชิกสำเร็จ! กำลังไปหน้าเข้าสู่ระบบ', 'success');
                     
                     // รอ 2 วินาทีแล้วไปหน้า login
                     setTimeout(() => {
@@ -165,20 +191,19 @@
             if (confirmPassword && password !== confirmPassword) {
                 this.style.borderColor = '#ff4757';
             } else {
-                this.style.borderColor = '#ddd';
+                this.style.borderColor = '#e1e1e1';
             }
         });
 
         // Username validation
         document.getElementById('username').addEventListener('input', function() {
             const username = this.value;
+            const usernamePattern = /^[a-zA-Z0-9_-]+$/;
             
-            // ตรวจสอบว่ามีแค่ตัวอักษรและตัวเลข
-            if (username && !/^[a-zA-Z0-9_]+$/.test(username)) {
+            if (username && !usernamePattern.test(username)) {
                 this.style.borderColor = '#ff4757';
-                showAlert('ชื่อผู้ใช้ใช้ได้เฉพาะตัวอักษร, ตัวเลข และ _ เท่านั้น', 'error');
             } else {
-                this.style.borderColor = '#ddd';
+                this.style.borderColor = '#e1e1e1';
             }
         });
 
@@ -198,17 +223,263 @@
             content.innerHTML = `<div class="alert ${typeClass}">${message}</div>`;
             modal.style.display = 'block';
             
-            // ปิดอัตโนมัติใน 3 วินาที (ยกเว้น error)
-            if (type !== 'error') {
-                setTimeout(() => {
-                    closeModal('alertModal');
-                }, 3000);
-            }
+            // ปิดอัตโนมัติใน 4 วินาที
+            setTimeout(() => {
+                closeModal('alertModal');
+            }, 4000);
         }
 
         function closeModal(modalId) {
             document.getElementById(modalId).style.display = 'none';
         }
     </script>
+
+    <style>
+        /* Register page specific styles */
+        .register-page {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .register-container {
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .register-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+        }
+
+        .register-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .register-header h1 {
+            color: #333;
+            margin: 0 0 0.5rem 0;
+            font-size: 2rem;
+        }
+
+        .register-header p {
+            color: #666;
+            margin: 0;
+        }
+
+        .register-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .form-group label {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .form-group input {
+            padding: 1rem;
+            border: 2px solid #e1e1e1;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-help {
+            font-size: 0.85rem;
+            color: #666;
+            margin-top: 0.25rem;
+        }
+
+        .role-info {
+            background: #f8f9ff;
+            border-radius: 10px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+
+        .info-box h3 {
+            color: #333;
+            margin: 0 0 1rem 0;
+            font-size: 1.1rem;
+        }
+
+        .info-box ul {
+            margin: 0;
+            padding-left: 1.5rem;
+            color: #555;
+        }
+
+        .info-box li {
+            margin-bottom: 0.5rem;
+            line-height: 1.4;
+        }
+
+        .btn {
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5a6fd8;
+            transform: translateY(-2px);
+        }
+
+        .btn-register {
+            width: 100%;
+            margin-top: 1rem;
+        }
+
+        .register-footer {
+            text-align: center;
+            margin-top: 1.5rem;
+        }
+
+        .register-footer p {
+            margin: 0.5rem 0;
+        }
+
+        .register-footer a {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        .register-footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 2rem;
+            border: none;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            position: relative;
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            position: absolute;
+            right: 1rem;
+            top: 1rem;
+            cursor: pointer;
+        }
+
+        .close:hover {
+            color: #000;
+        }
+
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 5px;
+            margin-bottom: 1rem;
+        }
+
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .alert-info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .register-card {
+                padding: 1.5rem;
+                margin: 1rem;
+            }
+
+            .register-header h1 {
+                font-size: 1.5rem;
+            }
+
+            .form-group input {
+                padding: 0.875rem;
+            }
+
+            .role-info {
+                padding: 0.75rem;
+            }
+
+            .info-box li {
+                font-size: 0.9rem;
+            }
+        }
+    </style>
 </body>
 </html>

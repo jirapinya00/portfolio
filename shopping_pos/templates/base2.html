@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}POS Dashboard - ระบบหลังบ้าน{% endblock %}</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
+{% block styles %}
+    <link rel="stylesheet" href="/static/dashboard.css">
+{% endblock %}
+
+
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2><i class="fas fa-cash-register"></i> POS System</h2>
+                <p>ระบบหลังบ้าน</p>
+            </div>
+            
+            <nav class="nav-menu">
+                <div class="nav-item">
+                    <a href="#dashboard" class="nav-link active" onclick="showSection('dashboard')">
+                        <i class="fas fa-tachometer-alt"></i>
+                        แดชบอร์ด
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="#products" class="nav-link" onclick="showSection('products')">
+                        <i class="fas fa-box"></i>
+                        จัดการสินค้า
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="#sales" class="nav-link" onclick="showSection('sales')">
+                        <i class="fas fa-shopping-cart"></i>
+                        ขายสินค้า
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="#reports" class="nav-link" onclick="showSection('reports')">
+                        <i class="fas fa-chart-bar"></i>
+                        รายงาน
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="#users" class="nav-link" onclick="showSection('users')">
+                        <i class="fas fa-users"></i>
+                        จัดการผู้ใช้
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="#customers" class="nav-link" onclick="showSection('customers')">
+                        <i class="fas fa-user-friends"></i>
+                        ลูกค้า
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="#inventory" class="nav-link" onclick="showSection('inventory')">
+                        <i class="fas fa-warehouse"></i>
+                        คลังสินค้า
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="#settings" class="nav-link" onclick="showSection('settings')">
+                        <i class="fas fa-cog"></i>
+                        ตั้งค่า
+                    </a>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Top Bar -->
+            <div class="top-bar">
+                <div class="welcome-text">
+                    <h1>ยินดีต้อนรับ, Admin</h1>
+                    <p id="current-time"></p>
+                </div>
+                <div class="user-info">
+            <span id="userName">ผู้เยี่ยมชม</span>
+            <button class="login-btn" id="loginBtn" onclick="window.location.href='/login'" style="display: none;">เข้าสู่ระบบ</button>
+            <button class="logout-btn" onclick="logout()" style="display: none;">ออกจากระบบ</button>
+        </div>
+
+            </div>
+
+
+             {% block content %}
+            <!-- เนื้อหาจะถูก override จากไฟล์อื่น -->
+            {% endblock %}
+        </main>
+    </div>
+
+            <!-- Dashboard Section -->
+           
+          <script>
+  function updateUserUI(isLoggedIn, username = "ผู้เยี่ยมชม") {
+    const userNameEl = document.getElementById("userName");
+    const logoutBtn = document.querySelector(".logout-btn");
+    const loginBtn = document.getElementById("loginBtn");
+
+    userNameEl.innerText = username;
+
+    if (isLoggedIn) {
+      logoutBtn.style.display = "inline-block";
+      loginBtn.style.display = "none";
+    } else {
+      logoutBtn.style.display = "none";
+      loginBtn.style.display = "inline-block";
+    }
+  }
+
+  // ตรวจสอบ token ก่อนเข้า dashboard
+  const token = localStorage.getItem("access_token");
+
+  if (!token) {
+    // ยังไม่ได้ล็อกอิน → redirect ทันที
+    window.location.href = "/login";
+  } else {
+    fetch('/api/auth/profile', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    })
+    .then(res => {
+      if (!res.ok) throw new Error("Unauthorized");
+      return res.json();
+    })
+    .then(data => {
+      const allowedRoles = ["admin", "staff", "manager"];
+      const role = data.user.role || "";
+
+      if (!allowedRoles.includes(role)) {
+        // ล็อกอินแล้วแต่ role ไม่ใช่ admin/staff/manager
+        alert("คุณไม่มีสิทธิ์เข้าถึงหน้านี้");
+        localStorage.removeItem("access_token");
+        window.location.href = "/login";
+        return;
+      }
+
+      updateUserUI(true, data.user.username);
+    })
+    .catch(() => {
+      // token ไม่ถูกต้อง → redirect ทันที
+      localStorage.removeItem("access_token");
+      window.location.href = "/login";
+    });
+  }
+
+  function logout() {
+    localStorage.removeItem("access_token");
+    window.location.href = "/";
+  }
+</script>
+
+  <!-- ✅ เรียก JS ภายนอก (ถ้ามี) -->
+  <script src="{{ url_for('static', filename='js/user.js') }}"></script>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>

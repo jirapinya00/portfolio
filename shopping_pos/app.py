@@ -181,19 +181,43 @@ def role_required(roles):
         return decorated_function
     return decorator
 
-# Routes - HTML Pages
+def admin_required(f):
+    """Decorator สำหรับหน้าที่ต้องการสิทธิ์ admin, staff, manager"""
+    @jwt_required()
+    def decorated_function(*args, **kwargs):
+        current_user_id = get_jwt_identity()
+        user = User.query.get(current_user_id)
+        if not user or user.role.name not in ['admin', 'staff', 'manager']:
+            return jsonify({'message': 'Access denied - Admin access required'}), 403
+        return f(*args, **kwargs)
+    decorated_function.__name__ = f.__name__
+    return decorated_function
+
+# Routes - HTML Pages (หน้าร้าน - เข้าได้ทุกคน)
 @app.route('/')
 def index():
-   return render_template('index.html')
+    """หน้าร้าน - เข้าได้โดยไม่ต้อง login หรือ login แล้วก็ได้"""
+    return render_template('index.html')
 
 @app.route('/about')
 def about():
-   return render_template('about.html')
+    return render_template('about.html')
 
 @app.route('/contact')
 def contact():
-   return render_template('contact.html')
+    return render_template('contact.html')
 
+@app.route('/shop')
+def shop():
+    """หน้าร้าน - ดูสินค้าทั้งหมด"""
+    return render_template('shop.html')
+
+@app.route('/cart')
+def cart():
+    """หน้าตะกร้าสินค้า"""
+    return render_template('cart.html')
+
+# Routes - Authentication
 @app.route('/login')
 def login_page():
     return render_template('login.html')
@@ -202,39 +226,45 @@ def login_page():
 def register_page():
     return render_template('register.html')
 
+# Routes - Backend (หลังร้าน - เฉพาะ admin, staff, manager)
 @app.route('/dashboard')
 def dashboard():
-    token = request.cookies.get('access_token_cookie')  # หรือใช้ session
-    # หรือไม่ต้องเช็คตรงนี้ ถ้าทำฝั่ง frontend แล้ว
+    """หน้า dashboard - เฉพาะ admin, staff, manager"""
     return render_template('dashboard.html')
-
 
 @app.route('/pos')
 def pos_dashboard():
+    """หน้า POS - เฉพาะ admin, staff, manager"""
     return render_template('pos_dashboard.html')
 
 @app.route('/products')
 def products_page():
+    """หน้าจัดการสินค้า - เฉพาะ admin, staff, manager"""
     return render_template('products.html')
 
 @app.route('/users')
 def users_page():
+    """หน้าจัดการผู้ใช้ - เฉพาะ admin"""
     return render_template('users.html')
 
 @app.route('/settings')
 def settings_page():
+    """หน้าตั้งค่า - เฉพาะ admin, manager"""
     return render_template('settings.html')
 
 @app.route('/sales-history')
 def sale_history():
+    """หน้าประวัติการขาย - เฉพาะ admin, staff, manager"""
     return render_template('sale_history.html')
 
 @app.route('/inventory-logs')
 def inventory_logs_page():
+    """หน้า log สินค้า - เฉพาะ admin, manager"""
     return render_template('inventory_logs.html')
 
 @app.route('/reports')
 def report_sales():
+    """หน้ารายงาน - เฉพาะ admin, manager"""
     return render_template('report_sales.html')
 
 # API Routes - Authentication
@@ -254,17 +284,19 @@ def register():
         if User.query.filter_by(email=data['email']).first():
             return jsonify({'message': 'อีเมลนี้มีอยู่แล้ว'}), 400
         
-        # สร้าง user ใหม่
+        # สร้าง user ใหม่ - default เป็น role 'user' (id=4)
         password_hash = generate_password_hash(data['password'])
         
-        # หา role_id (ถ้าไม่ระบุจะเป็น role_id = 2 คือ staff)
-        role_id = data.get('role_id', 2)
+        # ค้นหา role 'user'
+        user_role = Role.query.filter_by(name='user').first()
+        if not user_role:
+            return jsonify({'message': 'เกิดข้อผิดพลาดในระบบ role'}), 500
         
         user = User(
             username=data['username'],
             email=data['email'],
             password_hash=password_hash,
-            role_id=role_id
+            role_id=user_role.id  # role 'user' เป็นค่าเริ่มต้น
         )
         
         db.session.add(user)
@@ -287,7 +319,7 @@ def login():
         if not data.get('username') or not data.get('password'):
             return jsonify({'message': 'กรุณากรอก username และ password'}), 400
         
-        password = data['password'] # เพิ่มตัวแปร password จากhtml
+        password = data['password']
         
         # หา user จาก username หรือ email
         user = User.query.filter(
@@ -306,6 +338,11 @@ def login():
         # บันทึก log
         log_action(user.id, 'User logged in')
         
+        # กำหนด redirect URL ตาม role
+        redirect_url = '/'  # default สำหรับ user
+        if user.role.name in ['admin', 'staff', 'manager']:
+            redirect_url = '/dashboard'
+        
         return jsonify({
             'access_token': access_token,
             'user': {
@@ -313,7 +350,8 @@ def login():
                 'username': user.username,
                 'email': user.email,
                 'role': user.role.name
-            }
+            },
+            'redirect_url': redirect_url
         }), 200
         
     except Exception as e:
@@ -343,9 +381,61 @@ def get_profile():
     except Exception as e:
         return jsonify({'message': 'เกิดข้อผิดพลาด: ' + str(e)}), 500
 
-# API Routes
+@app.route('/api/auth/check-role', methods=['GET'])
+@jwt_required()
+def check_role():
+    """ตรวจสอบ role ของผู้ใช้"""
+    try:
+        current_user_id = get_jwt_identity()
+        user = User.query.get(current_user_id)
+        
+        if not user:
+            return jsonify({'message': 'ไม่พบผู้ใช้'}), 404
+        
+        # ตรวจสอบว่าเป็น admin/staff/manager หรือไม่
+        is_admin = user.role.name in ['admin', 'staff', 'manager']
+        
+        return jsonify({
+            'role': user.role.name,
+            'is_admin': is_admin,
+            'permissions': {
+                'can_access_dashboard': is_admin,
+                'can_manage_products': user.role.name in ['admin', 'manager'],
+                'can_manage_users': user.role.name == 'admin',
+                'can_view_reports': user.role.name in ['admin', 'manager'],
+                'can_access_pos': is_admin
+            }
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'message': 'เกิดข้อผิดพลาด: ' + str(e)}), 500
+
+# API Routes - Products (เข้าได้ทุกคน สำหรับหน้าร้าน)
+@app.route('/api/products/public', methods=['GET'])
+def get_public_products():
+    """API สำหรับแสดงสินค้าในหน้าร้าน - ไม่ต้อง login"""
+    try:
+        products = Product.query.filter_by(is_active=True).all()
+        result = []
+        
+        for product in products:
+            result.append({
+                'id': product.id,
+                'name': product.name,
+                'category': product.category.name,
+                'price': product.price,
+                'stock_quantity': product.stock_quantity
+            })
+        
+        return jsonify({'products': result}), 200
+        
+    except Exception as e:
+        return jsonify({'message': 'เกิดข้อผิดพลาด: ' + str(e)}), 500
+
+# API Routes - Admin Only
 @app.route('/api/products', methods=['GET'])
 @jwt_required()
+@role_required(['admin', 'staff', 'manager'])
 def get_products():
     try:
         products = Product.query.filter_by(is_active=True).all()
@@ -398,9 +488,69 @@ def create_product():
         db.session.rollback()
         return jsonify({'message': 'เกิดข้อผิดพลาด: ' + str(e)}), 500
 
-# API Routes - Sales
+# API Routes - Sales (สำหรับ user ทั่วไป - สั่งซื้อจากหน้าร้าน)
+@app.route('/api/orders', methods=['POST'])
+@jwt_required()
+def create_order():
+    """สำหรับ user ทั่วไปสั่งซื้อสินค้าจากหน้าร้าน"""
+    try:
+        data = request.get_json()
+        current_user_id = get_jwt_identity()
+        user = User.query.get(current_user_id)
+        
+        # ตรวจสอบว่าเป็น user ทั่วไป
+        if user.role.name != 'user':
+            return jsonify({'message': 'API นี้สำหรับ user ทั่วไปเท่านั้น'}), 403
+        
+        # สร้าง order number
+        from datetime import datetime
+        order_number = f"ORDER{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        
+        # สร้าง sale (ในที่นี้ใช้ตารางเดียวกัน แต่แยก logic)
+        sale = Sale(
+            sale_number=order_number,
+            customer_id=data.get('customer_id'),
+            user_id=current_user_id,
+            payment_method_id=data['payment_method_id'],
+            total_amount=data['total_amount'],
+            discount_amount=data.get('discount_amount', 0),
+            final_amount=data['final_amount'],
+            status='pending'  # สถานะ pending สำหรับ order
+        )
+        
+        db.session.add(sale)
+        db.session.flush()
+        
+        # เพิ่ม sale items
+        for item in data['items']:
+            sale_item = SaleItem(
+                sale_id=sale.id,
+                product_id=item['product_id'],
+                quantity=item['quantity'],
+                unit_price=item['unit_price'],
+                total_price=item['total_price']
+            )
+            db.session.add(sale_item)
+        
+        db.session.commit()
+        
+        # บันทึก log
+        log_action(current_user_id, 'Order created', 'sales', sale.id)
+        
+        return jsonify({
+            'message': 'สั่งซื้อสำเร็จ',
+            'order_id': sale.id,
+            'order_number': order_number
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'message': 'เกิดข้อผิดพลาด: ' + str(e)}), 500
+
+# API Routes - Sales (POS สำหรับ admin/staff/manager)
 @app.route('/api/sales', methods=['POST'])
 @jwt_required()
+@role_required(['admin', 'staff', 'manager'])
 def create_sale():
     try:
         data = request.get_json()
@@ -422,7 +572,7 @@ def create_sale():
         )
         
         db.session.add(sale)
-        db.session.flush()  # เพื่อให้ได้ sale.id
+        db.session.flush()
         
         # เพิ่ม sale items
         for item in data['items']:
@@ -467,6 +617,26 @@ def create_sale():
         db.session.rollback()
         return jsonify({'message': 'เกิดข้อผิดพลาด: ' + str(e)}), 500
 
+# API สำหรับ Dashboard Stats (เฉพาะ admin/staff/manager)
+@app.route('/api/reports/dashboard-stats', methods=['GET'])
+@jwt_required()
+@role_required(['admin', 'staff', 'manager'])
+def dashboard_stats():
+    try:
+        # คำนวณสถิติต่างๆ
+        total_sales = db.session.query(db.func.sum(Sale.final_amount)).scalar() or 0
+        total_products = Product.query.filter_by(is_active=True).count()
+        total_users = User.query.filter_by(is_active=True).count()
+        
+        return jsonify({
+            'total_sales': total_sales,
+            'total_products': total_products,
+            'total_users': total_users
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'message': 'เกิดข้อผิดพลาด: ' + str(e)}), 500
+
 # Initialize database
 def init_db():
     """สร้างตารางและข้อมูลเริ่มต้น"""
@@ -476,12 +646,14 @@ def init_db():
         # สร้าง roles เริ่มต้น
         if not Role.query.first():
             admin_role = Role(name='admin', description='ผู้ดูแลระบบ')
-            staff_role = Role(name='staff', description='พนักงาน')
             manager_role = Role(name='manager', description='ผู้จัดการ')
+            staff_role = Role(name='staff', description='พนักงาน')
+            user_role = Role(name='user', description='ผู้ใช้ทั่วไป/ลูกค้า')
             
             db.session.add(admin_role)
-            db.session.add(staff_role)
             db.session.add(manager_role)
+            db.session.add(staff_role)
+            db.session.add(user_role)
             db.session.commit()
         
         # สร้าง admin user เริ่มต้น
@@ -490,7 +662,7 @@ def init_db():
                 username='admin',
                 email='admin@pos.com',
                 password_hash=generate_password_hash('admin123'),
-                role_id=1
+                role_id=1  # admin role
             )
             db.session.add(admin_user)
             db.session.commit()
@@ -510,9 +682,11 @@ def init_db():
         if not Category.query.first():
             food = Category(name='อาหาร', description='อาหารทุกประเภท')
             drink = Category(name='เครื่องดื่ม', description='เครื่องดื่มทุกประเภท')
+            snack = Category(name='ขนม', description='ขนมและของทานเล่น')
             
             db.session.add(food)
             db.session.add(drink)
+            db.session.add(snack)
             db.session.commit()
 
 if __name__ == '__main__':
