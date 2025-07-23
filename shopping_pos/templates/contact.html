@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ติดต่อเรา - ร้านค้าออนไลน์</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <nav class="navbar shadow-lg">
+    <div class="navbar-content flex-between">
+      <a href="/" class="navbar-brand">🛍️ ร้านค้าออนไลน์</a>
+      <ul class="navbar-nav">
+        <li><a href="/">สินค้า</a></li>
+        <li><a href="/about">เกี่ยวกับเรา</a></li>
+        <li><a href="/contact" class="active">ติดต่อ</a></li>
+      </ul>
+      <div class="user-info">
+        <a href="/login" class="btn btn-primary">เข้าสู่ระบบ</a>
+        <a href="/register" class="btn btn-secondary">สมัครสมาชิก</a>
+      </div>
+    </div>
+  </nav>
+
+  <section class="main-content">
+    <div class="page-header text-center">
+      <h1>ติดต่อเรา</h1>
+      <p>หากคุณมีคำถาม ข้อเสนอแนะ หรือปัญหา ติดต่อเราได้ทุกเมื่อ</p>
+    </div>
+
+    <div class="card shadow w-full max-w-xl mx-auto">
+      <form class="login-form">
+        <div class="form-group">
+          <label for="name">ชื่อของคุณ</label>
+          <input type="text" id="name" name="name" placeholder="กรอกชื่อของคุณ">
+        </div>
+        <div class="form-group">
+          <label for="email">อีเมล</label>
+          <input type="email" id="email" name="email" placeholder="example@email.com">
+        </div>
+        <div class="form-group">
+          <label for="message">ข้อความ</label>
+          <textarea id="message" name="message" rows="5" placeholder="พิมพ์ข้อความของคุณที่นี่..."></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary btn-login">ส่งข้อความ</button>
+      </form>
+    </div>
+  </section>
+
+  <footer class="login-footer">
+    <p>ร้านค้าออนไลน์ &copy; 2025</p>
+  </footer>
+</body>
+</html>

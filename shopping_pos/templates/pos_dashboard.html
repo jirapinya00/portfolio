@@ -555,10 +555,8 @@
                         <br>
                         <small style="color: #666;">ผู้ดูแลระบบ</small>
                     </div>
-                    <button class="btn btn-danger" onclick="logout()">
-                        <i class="fas fa-sign-out-alt"></i>
-                        ออกจากระบบ
-                    </button>
+                  <button class="logout-btn" onclick="logout()">ออกจากระบบ</button>
+
                 </div>
             </div>
 
@@ -805,3 +803,14 @@
                     </div>
                 </div>
             </div>      
+            <script>
+                 function logout() {
+      localStorage.removeItem("access_token");
+      window.location.href = "/login";
+    }
+            </script>
+
+</main>
+</div>
+</body>
+</html>
