@@ -5,17 +5,681 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}POS Dashboard - ระบบหลังบ้าน{% endblock %}</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
-{% block styles %}
-    <link rel="stylesheet" href="/static/dashboard.css">
-{% endblock %}
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            color: #333;
+        }
 
+        .dashboard-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            width: 280px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            box-shadow: 4px 0 20px rgba(0, 0, 0, 0.1);
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .sidebar-header {
+            padding: 2rem;
+            text-align: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .sidebar-header h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .sidebar-header h2 i {
+            font-size: 1.8rem;
+        }
+
+        .sidebar-header p {
+            opacity: 0.9;
+            font-size: 0.9rem;
+        }
+
+        .nav-menu {
+            padding: 1rem 0;
+        }
+
+        .nav-item {
+            margin: 0.5rem 1rem;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem 1.5rem;
+            text-decoration: none;
+            color: #555;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .nav-link::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            transition: left 0.3s ease;
+            z-index: -1;
+        }
+
+        .nav-link:hover::before,
+        .nav-link.active::before {
+            left: 0;
+        }
+
+        .nav-link:hover,
+        .nav-link.active {
+            color: white;
+            transform: translateX(5px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .nav-link i {
+            font-size: 1.2rem;
+            width: 20px;
+            text-align: center;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: 280px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+            min-height: 100vh;
+        }
+
+        .top-bar {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1.5rem 2rem;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .welcome-text h1 {
+            color: #333;
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+        }
+
+        .welcome-text p {
+            color: #666;
+            font-size: 1rem;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        #userName {
+            font-weight: 600;
+            color: #333;
+            padding: 0.75rem 1.5rem;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 25px;
+            border: 2px solid rgba(102, 126, 234, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        #userName::before {
+            content: "👤";
+        }
+
+        .login-btn, .logout-btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 25px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .login-btn {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+        }
+
+        .logout-btn {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a52);
+            color: white;
+        }
+
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+        }
+
+        .logout-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+        }
+
+        /* Content Area */
+        .content-area {
+            padding: 2rem;
+        }
+
+        .dashboard-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .dashboard-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .card-icon {
+            font-size: 2.5rem;
+            opacity: 0.7;
+        }
+
+        .card-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+
+        .card-subtitle {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        /* Section Styles */
+        .section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .section h2 {
+            color: #333;
+            margin-bottom: 1.5rem;
+            font-size: 1.8rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .section h2 i {
+            color: #667eea;
+        }
+
+        /* Quick Actions */
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .quick-action-btn {
+            background: rgba(102, 126, 234, 0.1);
+            border: 2px solid rgba(102, 126, 234, 0.2);
+            border-radius: 15px;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: #333;
+        }
+
+        .quick-action-btn:hover {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .quick-action-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .quick-action-text {
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .top-bar {
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+
+            .dashboard-cards {
+                grid-template-columns: 1fr;
+            }
+
+            .quick-actions {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* Loading Animation */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(102, 126, 234, 0.3);
+            border-radius: 50%;
+            border-top-color: #667eea;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Table Styles */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        .data-table th {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            font-weight: 600;
+        }
+
+        .data-table tr:hover {
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        /* Button Styles */
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-success {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+        }
+
+        .btn-danger {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a52);
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Form Styles */
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 10px rgba(102, 126, 234, 0.2);
+        }
+
+        /* Alert Styles */
+        .alert {
+            padding: 1rem 1.5rem;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .alert-success {
+            background: rgba(76, 175, 80, 0.1);
+            color: #2e7d32;
+            border: 1px solid rgba(76, 175, 80, 0.3);
+        }
+
+        .alert-error {
+            background: rgba(244, 67, 54, 0.1);
+            color: #c62828;
+            border: 1px solid rgba(244, 67, 54, 0.3);
+        }
+
+        .alert-info {
+            background: rgba(33, 150, 243, 0.1);
+            color: #1565c0;
+            border: 1px solid rgba(33, 150, 243, 0.3);
+        }
+
+        .alert-warning {
+            background: rgba(255, 193, 7, 0.1);
+            color: #f57c00;
+            border: 1px solid rgba(255, 193, 7, 0.3);
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        /* Sidebar Toggle for Mobile */
+        .sidebar-toggle {
+            display: none;
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 0.75rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar-toggle {
+                display: inline-block;
+            }
+
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+            .sidebar.show {
+                transform: translateX(0);
+            }
+        }
+
+        /* Statistics Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            border-left: 4px solid #667eea;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .stat-title {
+            font-size: 0.9rem;
+            color: #666;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            color: white;
+        }
+
+        .stat-icon.sales { background: linear-gradient(45deg, #4CAF50, #45a049); }
+        .stat-icon.products { background: linear-gradient(45deg, #2196F3, #1976D2); }
+        .stat-icon.users { background: linear-gradient(45deg, #FF9800, #F57C00); }
+        .stat-icon.orders { background: linear-gradient(45deg, #9C27B0, #7B1FA2); }
+
+        .stat-value {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-change {
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .stat-change.positive {
+            color: #4CAF50;
+        }
+
+        .stat-change.negative {
+            color: #f44336;
+        }
+
+        /* Chart Container */
+        .chart-container {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .chart-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .chart-filters {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .filter-btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .filter-btn.active,
+        .filter-btn:hover {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+    </style>
+    {% block styles %}{% endblock %}
 </head>
 <body>
     <div class="dashboard-container">
         <!-- Sidebar -->
-        <aside class="sidebar">
+        <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <h2><i class="fas fa-cash-register"></i> POS System</h2>
                 <p>ระบบหลังบ้าน</p>
@@ -77,88 +741,285 @@
         <main class="main-content">
             <!-- Top Bar -->
             <div class="top-bar">
-                <div class="welcome-text">
-                    <h1>ยินดีต้อนรับ, Admin</h1>
-                    <p id="current-time"></p>
+                <div class="welcome-section">
+                    <button class="sidebar-toggle" onclick="toggleSidebar()">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <div class="welcome-text">
+                        <h1>ยินดีต้อนรับ, Admin</h1>
+                        <p id="current-time"></p>
+                    </div>
                 </div>
                 <div class="user-info">
-            <span id="userName">ผู้เยี่ยมชม</span>
-            <button class="login-btn" id="loginBtn" onclick="window.location.href='/login'" style="display: none;">เข้าสู่ระบบ</button>
-            <button class="logout-btn" onclick="logout()" style="display: none;">ออกจากระบบ</button>
-        </div>
-
+                    <span id="userName">ผู้เยี่ยมชม</span>
+                    <button class="login-btn" id="loginBtn" onclick="window.location.href='/login'" style="display: none;">
+                        <i class="fas fa-sign-in-alt"></i> เข้าสู่ระบบ
+                    </button>
+                    <button class="logout-btn" onclick="logout()" style="display: none;">
+                        <i class="fas fa-sign-out-alt"></i> ออกจากระบบ
+                    </button>
+                </div>
             </div>
 
+            <div class="content-area">
+                {% block content %}
+                <!-- Default Dashboard Content -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-title">ยอดขายรวม</div>
+                            <div class="stat-icon sales">
+                                <i class="fas fa-dollar-sign"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value">125,000</div>
+                        <div class="stat-change positive">
+                            <i class="fas fa-arrow-up"></i> +12.5%
+                        </div>
+                    </div>
 
-             {% block content %}
-            <!-- เนื้อหาจะถูก override จากไฟล์อื่น -->
-            {% endblock %}
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-title">สินค้าทั้งหมด</div>
+                            <div class="stat-icon products">
+                                <i class="fas fa-box"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value">1,234</div>
+                        <div class="stat-change positive">
+                            <i class="fas fa-arrow-up"></i> +5.2%
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-title">ผู้ใช้งาน</div>
+                            <div class="stat-icon users">
+                                <i class="fas fa-users"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value">89</div>
+                        <div class="stat-change positive">
+                            <i class="fas fa-arrow-up"></i> +8.1%
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-title">คำสั่งซื้อ</div>
+                            <div class="stat-icon orders">
+                                <i class="fas fa-shopping-cart"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value">456</div>
+                        <div class="stat-change negative">
+                            <i class="fas fa-arrow-down"></i> -2.3%
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2><i class="fas fa-bolt"></i> การดำเนินการด่วน</h2>
+                    <div class="quick-actions">
+                        <a href="/pos" class="quick-action-btn">
+                            <div class="quick-action-icon">
+                                <i class="fas fa-cash-register"></i>
+                            </div>
+                            <div class="quick-action-text">ขายสินค้า</div>
+                        </a>
+                        <a href="/products" class="quick-action-btn">
+                            <div class="quick-action-icon">
+                                <i class="fas fa-plus-circle"></i>
+                            </div>
+                            <div class="quick-action-text">เพิ่มสินค้า</div>
+                        </a>
+                        <a href="/reports" class="quick-action-btn">
+                            <div class="quick-action-icon">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                            <div class="quick-action-text">ดูรายงาน</div>
+                        </a>
+                        <a href="/users" class="quick-action-btn">
+                            <div class="quick-action-icon">
+                                <i class="fas fa-user-plus"></i>
+                            </div>
+                            <div class="quick-action-text">จัดการผู้ใช้</div>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h3 class="chart-title">สถิติการขาย</h3>
+                        <div class="chart-filters">
+                            <button class="filter-btn active">วันนี้</button>
+                            <button class="filter-btn">สัปดาห์</button>
+                            <button class="filter-btn">เดือน</button>
+                            <button class="filter-btn">ปี</button>
+                        </div>
+                    </div>
+                    <div class="chart-placeholder" style="height: 300px; background: #f8f9fa; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #666;">
+                        <i class="fas fa-chart-area" style="font-size: 3rem; margin-right: 1rem;"></i>
+                        กราฟแสดงสถิติการขาย
+                    </div>
+                </div>
+                {% endblock %}
+            </div>
         </main>
     </div>
 
-            <!-- Dashboard Section -->
-           
-          <script>
-  function updateUserUI(isLoggedIn, username = "ผู้เยี่ยมชม") {
-    const userNameEl = document.getElementById("userName");
-    const logoutBtn = document.querySelector(".logout-btn");
-    const loginBtn = document.getElementById("loginBtn");
+    <script>
+    function updateUserUI(isLoggedIn, username = "ผู้เยี่ยมชม") {
+        const userNameEl = document.getElementById("userName");
+        const logoutBtn = document.querySelector(".logout-btn");
+        const loginBtn = document.getElementById("loginBtn");
 
-    userNameEl.innerText = username;
+        userNameEl.innerText = username;
 
-    if (isLoggedIn) {
-      logoutBtn.style.display = "inline-block";
-      loginBtn.style.display = "none";
-    } else {
-      logoutBtn.style.display = "none";
-      loginBtn.style.display = "inline-block";
+        if (isLoggedIn) {
+            logoutBtn.style.display = "inline-flex";
+            loginBtn.style.display = "none";
+        } else {
+            logoutBtn.style.display = "none";
+            loginBtn.style.display = "inline-flex";
+        }
     }
-  }
 
-  // ตรวจสอบ token ก่อนเข้า dashboard
-  const token = localStorage.getItem("access_token");
+    // ตรวจสอบ token ก่อนเข้า dashboard
+    const token = localStorage.getItem("access_token");
 
-  if (!token) {
-    // ยังไม่ได้ล็อกอิน → redirect ทันที
-    window.location.href = "/login";
-  } else {
-    fetch('/api/auth/profile', {
-      headers: { 'Authorization': 'Bearer ' + token }
-    })
-    .then(res => {
-      if (!res.ok) throw new Error("Unauthorized");
-      return res.json();
-    })
-    .then(data => {
-      const allowedRoles = ["admin", "staff", "manager"];
-      const role = data.user.role || "";
-
-      if (!allowedRoles.includes(role)) {
-        // ล็อกอินแล้วแต่ role ไม่ใช่ admin/staff/manager
-        alert("คุณไม่มีสิทธิ์เข้าถึงหน้านี้");
-        localStorage.removeItem("access_token");
+    if (!token) {
+        // ยังไม่ได้ล็อกอิน → redirect ทันที
         window.location.href = "/login";
-        return;
-      }
+    } else {
+        fetch('/api/auth/profile', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        })
+        .then(res => {
+            if (!res.ok) throw new Error("Unauthorized");
+            return res.json();
+        })
+        .then(data => {
+            const allowedRoles = ["admin", "staff", "manager"];
+            const role = data.user.role || "";
 
-      updateUserUI(true, data.user.username);
-    })
-    .catch(() => {
-      // token ไม่ถูกต้อง → redirect ทันที
-      localStorage.removeItem("access_token");
-      window.location.href = "/login";
+            if (!allowedRoles.includes(role)) {
+                // ล็อกอินแล้วแต่ role ไม่ใช่ admin/staff/manager
+                alert("คุณไม่มีสิทธิ์เข้าถึงหน้านี้");
+                localStorage.removeItem("access_token");
+                window.location.href = "/login";
+                return;
+            }
+
+            updateUserUI(true, data.user.username);
+        })
+        .catch(() => {
+            // token ไม่ถูกต้อง → redirect ทันที
+            localStorage.removeItem("access_token");
+            window.location.href = "/login";
+        });
+    }
+
+    function logout() {
+        localStorage.removeItem("access_token");
+        window.location.href = "/";
+    }
+
+    // Update current time
+    function updateTime() {
+        const now = new Date();
+        const timeString = now.toLocaleString('th-TH', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        const timeElement = document.getElementById('current-time');
+        if (timeElement) {
+            timeElement.textContent = timeString;
+        }
+    }
+
+    // Toggle sidebar for mobile
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        sidebar.classList.toggle('show');
+    }
+
+    // Navigation functionality
+    function showSection(sectionName) {
+        // Remove active class from all nav links
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.classList.remove('active');
+        });
+        
+        // Add active class to clicked nav link
+        event.target.classList.add('active');
+        
+        // Here you would typically load different content based on section
+        console.log('Showing section:', sectionName);
+    }
+
+    // Filter button functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        updateTime();
+        setInterval(updateTime, 60000); // Update every minute
+
+        // Add click handlers for filter buttons
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+
+        // Close sidebar when clicking outside on mobile
+        document.addEventListener('click', function(e) {
+            const sidebar = document.getElementById('sidebar');
+            const toggle = document.querySelector('.sidebar-toggle');
+            
+            if (window.innerWidth <= 768 && 
+                !sidebar.contains(e.target) && 
+                !toggle.contains(e.target)) {
+                sidebar.classList.remove('show');
+            }
+        });
     });
-  }
 
-  function logout() {
-    localStorage.removeItem("access_token");
-    window.location.href = "/";
-  }
-</script>
+    // Loading state helper
+    function showLoading(element) {
+        const original = element.innerHTML;
+        element.innerHTML = '<span class="loading"></span> กำลังโหลด...';
+        element.disabled = true;
+        return original;
+    }
 
-  <!-- ✅ เรียก JS ภายนอก (ถ้ามี) -->
-  <script src="{{ url_for('static', filename='js/user.js') }}"></script>
+    function hideLoading(element, originalContent) {
+        element.innerHTML = originalContent;
+        element.disabled = false;
+    }
 
-  {% block scripts %}{% endblock %}
+    // Success/Error message helper
+    function showAlert(message, type = 'info') {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type}`;
+        alertDiv.innerHTML = `
+            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-triangle' : 'info-circle'}"></i>
+            ${message}
+        `;
+        
+        const contentArea = document.querySelector('.content-area');
+        contentArea.insertBefore(alertDiv, contentArea.firstChild);
+        
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            alertDiv.remove();
+        }, 5000);
+    }
+    </script>
+
+    {% block scripts %}{% endblock %}
 </body>
 </html>

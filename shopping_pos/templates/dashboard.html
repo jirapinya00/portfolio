@@ -1,515 +1,791 @@
-<!DOCTYPE html>
-<html lang="th">
-<head>
-  <meta charset="UTF-8">
-  <title>แดชบอร์ด - ระบบจัดการ</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="{{ url_for('static', filename='js/user.js') }}"></script>
-</head>
-<body class="dashboard">
-  <nav class="navbar">
-    <div class="navbar-content">
-      <a class="navbar-brand" href="#">🏪 POS Admin</a>
-      <ul class="navbar-nav">
-        <li><a href="/dashboard" class="active">แดชบอร์ด</a></li>
-        <li><a href="/pos">ขายสินค้า (POS)</a></li>
-        <li><a href="/products">จัดการสินค้า</a></li>
-        <li><a href="/sales-history">ประวัติการขาย</a></li>
-        <li id="reportsMenu"><a href="/reports">รายงาน</a></li>
-        <li id="usersMenu"><a href="/users">จัดการผู้ใช้</a></li>
-        <li id="settingsMenu"><a href="/settings">ตั้งค่า</a></li>
-        <li><a href="/" target="_blank">🛍️ ดูหน้าร้าน</a></li>
-      </ul>
-      <div class="user-info">
-        <span id="userRole" class="user-role"></span>
-        <span id="userName">...</span>
-        <button class="logout-btn" onclick="logout()">ออกจากระบบ</button>
-      </div>
-    </div>
-  </nav>
+{% extends 'base2.html' %}
 
-  <!-- Access Denied Message -->
-  <div id="accessDenied" class="access-denied" style="display: none;">
-    <div class="access-denied-content">
-      <h2>🚫 ไม่มีสิทธิ์เข้าถึง</h2>
-      <p>คุณไม่มีสิทธิ์เข้าถึงระบบจัดการ</p>
-      <p>หน้านี้สำหรับ Admin, Manager และ Staff เท่านั้น</p>
-      <div class="access-denied-actions">
-        <button onclick="goToStore()" class="btn btn-primary">ไปหน้าร้าน</button>
-        <button onclick="logout()" class="btn btn-outline">ออกจากระบบ</button>
-      </div>
-    </div>
-  </div>
+{% block title %}แดชบอร์ด - ระบบจัดการ POS{% endblock %}
 
-  <main class="main-content" id="mainContent">
-    <div class="page-header">
-      <h1>แดชบอร์ด - ระบบจัดการ</h1>
-      <p>ภาพรวมข้อมูลระบบของคุณ</p>
+{% block content %}
+<!-- Stats Grid -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-header">
+            <div class="stat-title">ยอดขายวันนี้</div>
+            <div class="stat-icon sales">
+                <i class="fas fa-cash-register"></i>
+            </div>
+        </div>
+        <div class="stat-value" id="todaySales">0</div>
+        <div class="stat-change positive" id="todaySalesChange">
+            <i class="fas fa-arrow-up"></i> +0%
+        </div>
     </div>
 
-    <div class="cards-grid">
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">ยอดขายทั้งหมด</div>
-          <div class="card-icon">💰</div>
+    <div class="stat-card">
+        <div class="stat-header">
+            <div class="stat-title">สินค้าทั้งหมด</div>
+            <div class="stat-icon products">
+                <i class="fas fa-box"></i>
+            </div>
         </div>
-        <div class="card-value" id="totalSales">0</div>
-        <div class="card-subtitle">บาท</div>
-      </div>
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">จำนวนสินค้า</div>
-          <div class="card-icon">📦</div>
+        <div class="stat-value" id="totalProducts">0</div>
+        <div class="stat-change" id="productsChange">
+            <i class="fas fa-minus"></i> 0 รายการ
         </div>
-        <div class="card-value" id="totalProducts">0</div>
-        <div class="card-subtitle">รายการ</div>
-      </div>
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">จำนวนผู้ใช้</div>
-          <div class="card-icon">👥</div>
-        </div>
-        <div class="card-value" id="totalUsers">0</div>
-        <div class="card-subtitle">คน</div>
-      </div>
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">การขายวันนี้</div>
-          <div class="card-icon">📈</div>
-        </div>
-        <div class="card-value" id="todaySales">0</div>
-        <div class="card-subtitle">บาท</div>
-      </div>
     </div>
 
-    <!-- Role-based Content -->
-    <div class="dashboard-sections">
-      <!-- Quick Actions Section -->
-      <section class="dashboard-section">
-        <h2>การดำเนินการด่วน</h2>
-        <div class="quick-actions">
-          <button class="quick-action-btn" onclick="window.location.href='/pos'">
-            <div class="quick-action-icon">🛒</div>
+    <div class="stat-card">
+        <div class="stat-header">
+            <div class="stat-title">ผู้ใช้งาน</div>
+            <div class="stat-icon users">
+                <i class="fas fa-users"></i>
+            </div>
+        </div>
+        <div class="stat-value" id="totalUsers">0</div>
+        <div class="stat-change" id="usersChange">
+            <i class="fas fa-user-plus"></i> ผู้ใช้ทั้งหมด
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-header">
+            <div class="stat-title">ยอดขายเดือนนี้</div>
+            <div class="stat-icon orders">
+                <i class="fas fa-chart-line"></i>
+            </div>
+        </div>
+        <div class="stat-value" id="monthlySales">0</div>
+        <div class="stat-change positive" id="monthlySalesChange">
+            <i class="fas fa-arrow-up"></i> +0%
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions Section -->
+<div class="section">
+    <h2><i class="fas fa-bolt"></i> การดำเนินการด่วน</h2>
+    <div class="quick-actions">
+        <button class="quick-action-btn" onclick="window.location.href='/pos'">
+            <div class="quick-action-icon">
+                <i class="fas fa-cash-register"></i>
+            </div>
             <div class="quick-action-text">ขายสินค้า</div>
-          </button>
-          <button class="quick-action-btn" onclick="window.location.href='/products'" id="manageProductsBtn">
-            <div class="quick-action-icon">📦</div>
-            <div class="quick-action-text">จัดการสินค้า</div>
-          </button>
-          <button class="quick-action-btn" onclick="window.location.href='/sales-history'">
-            <div class="quick-action-icon">📋</div>
+        </button>
+        <button class="quick-action-btn" onclick="window.location.href='/products'" id="manageProductsBtn">
+            <div class="quick-action-icon">
+                <i class="fas fa-plus-circle"></i>
+            </div>
+            <div class="quick-action-text">เพิ่มสินค้า</div>
+        </button>
+        <button class="quick-action-btn" onclick="window.location.href='/sales-history'">
+            <div class="quick-action-icon">
+                <i class="fas fa-history"></i>
+            </div>
             <div class="quick-action-text">ประวัติการขาย</div>
-          </button>
-          <button class="quick-action-btn" onclick="window.open('/', '_blank')">
-            <div class="quick-action-icon">🛍️</div>
+        </button>
+        <button class="quick-action-btn" onclick="window.location.href='/reports'" id="reportsBtn">
+            <div class="quick-action-icon">
+                <i class="fas fa-chart-bar"></i>
+            </div>
+            <div class="quick-action-text">รายงาน</div>
+        </button>
+        <button class="quick-action-btn" onclick="window.location.href='/users'" id="usersBtn">
+            <div class="quick-action-icon">
+                <i class="fas fa-user-cog"></i>
+            </div>
+            <div class="quick-action-text">จัดการผู้ใช้</div>
+        </button>
+        <button class="quick-action-btn" onclick="window.open('/', '_blank')">
+            <div class="quick-action-icon">
+                <i class="fas fa-store"></i>
+            </div>
             <div class="quick-action-text">ดูหน้าร้าน</div>
-          </button>
-        </div>
-      </section>
-
-      <!-- Recent Activities (for all roles) -->
-      <section class="dashboard-section">
-        <h2>กิจกรรมล่าสุด</h2>
-        <div id="recentActivities" class="recent-activities">
-          <div class="activity-loading">กำลังโหลด...</div>
-        </div>
-      </section>
+        </button>
     </div>
-  </main>
+</div>
 
-  <script>
+<!-- Charts Section -->
+<div class="chart-container">
+    <div class="chart-header">
+        <h3 class="chart-title">สถิติการขาย 7 วันย้อนหลัง</h3>
+        <div class="chart-filters">
+            <button class="filter-btn active" data-period="7">7 วัน</button>
+            <button class="filter-btn" data-period="30">30 วัน</button>
+            <button class="filter-btn" data-period="90">3 เดือน</button>
+        </div>
+    </div>
+    <div class="chart-placeholder" id="salesChart">
+        <canvas id="salesChartCanvas" width="400" height="200"></canvas>
+    </div>
+</div>
+
+<!-- Recent Activities Section -->
+<div class="section">
+    <h2><i class="fas fa-clock"></i> กิจกรรมล่าสุด</h2>
+    <div id="recentActivities" class="activities-container">
+        <div class="activity-loading">
+            <span class="loading"></span> กำลังโหลดข้อมูล...
+        </div>
+    </div>
+</div>
+
+<!-- Low Stock Alert -->
+<div class="section" id="lowStockSection" style="display: none;">
+    <h2><i class="fas fa-exclamation-triangle text-warning"></i> แจ้งเตือนสินค้าใกล้หมด</h2>
+    <div id="lowStockItems" class="low-stock-container">
+    </div>
+</div>
+
+<!-- Top Selling Products -->
+<div class="section">
+    <h2><i class="fas fa-trophy"></i> สินค้าขายดี</h2>
+    <div id="topProducts" class="top-products-container">
+        <div class="activity-loading">
+            <span class="loading"></span> กำลังโหลดข้อมูล...
+        </div>
+    </div>
+</div>
+
+<!-- Access Denied Modal -->
+<div id="accessDeniedModal" class="modal">
+    <div class="modal-content">
+        <div style="text-align: center;">
+            <div style="font-size: 4rem; color: #ff6b6b; margin-bottom: 1rem;">
+                <i class="fas fa-ban"></i>
+            </div>
+            <h2 style="color: #333; margin-bottom: 1rem;">ไม่มีสิทธิ์เข้าถึง</h2>
+            <p style="color: #666; margin-bottom: 2rem;">
+                คุณไม่มีสิทธิ์เข้าถึงระบบจัดการ<br>
+                หน้านี้สำหรับ Admin, Manager และ Staff เท่านั้น
+            </p>
+            <div style="display: flex; gap: 1rem; justify-content: center;">
+                <button onclick="goToStore()" class="btn btn-primary">
+                    <i class="fas fa-store"></i> ไปหน้าร้าน
+                </button>
+                <button onclick="logout()" class="btn btn-danger">
+                    <i class="fas fa-sign-out-alt"></i> ออกจากระบบ
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+<script>
     let currentUser = null;
     let userPermissions = null;
+    let salesChart = null;
 
-    // ตรวจสอบการเข้าถึงและโหลดข้อมูล
+    // Initialize dashboard when page loads
     document.addEventListener('DOMContentLoaded', function() {
-      const token = localStorage.getItem('access_token');
-      if (!token) {
-        window.location.href = "/login";
-        return;
-      }
-
-      // ตรวจสอบ profile และ role
-      Promise.all([
-        fetch('/api/auth/profile', {
-          headers: { 'Authorization': 'Bearer ' + token }
-        }),
-        fetch('/api/auth/check-role', {
-          headers: { 'Authorization': 'Bearer ' + token }
-        })
-      ])
-      .then(responses => Promise.all(responses.map(r => r.json())))
-      .then(([profileData, roleData]) => {
-        currentUser = profileData.user;
-        userPermissions = roleData.permissions;
-
-        // ตรวจสอบสิทธิ์เข้าถึงระบบจัดการ
-        if (!userPermissions.can_access_dashboard) {
-          showAccessDenied();
-          return;
-        }
-
-        // แสดงข้อมูลผู้ใช้
-        showUserInterface();
-        
-        // ปรับเมนูตาม role
-        adjustMenuByRole();
-        
-        // โหลดข้อมูล dashboard
-        loadDashboardData();
-        loadRecentActivities();
-      })
-      .catch(error => {
-        console.error('Error:', error);
-        localStorage.removeItem('access_token');
-        window.location.href = "/login";
-      });
+        initializeDashboard();
     });
 
-    function showAccessDenied() {
-      document.getElementById('accessDenied').style.display = 'flex';
-      document.getElementById('mainContent').style.display = 'none';
-      document.querySelector('.navbar').style.display = 'none';
+    async function initializeDashboard() {
+        const token = localStorage.getItem('access_token');
+        
+        if (!token) {
+            window.location.href = "/login";
+            return;
+        }
+
+        try {
+            // Check authentication and permissions
+            const [profileResponse, roleResponse] = await Promise.all([
+                fetch('/api/auth/profile', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                }),
+                fetch('/api/auth/check-role', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                })
+            ]);
+
+            if (!profileResponse.ok || !roleResponse.ok) {
+                throw new Error('Authentication failed');
+            }
+
+            const profileData = await profileResponse.json();
+            const roleData = await roleResponse.json();
+
+            currentUser = profileData.user;
+            userPermissions = roleData.permissions;
+
+            // Check dashboard access
+            if (!userPermissions || !userPermissions.can_access_dashboard) {
+                showAccessDenied();
+                return;
+            }
+
+            // Update user interface
+            updateWelcomeMessage();
+            adjustUIByRole();
+            
+            // Load dashboard data
+            await loadDashboardData();
+            loadRecentActivities();
+            loadTopProducts();
+            checkLowStock();
+            initializeSalesChart();
+
+        } catch (error) {
+            console.error('Dashboard initialization error:', error);
+            localStorage.removeItem('access_token');
+            window.location.href = "/login";
+        }
     }
 
-    function showUserInterface() {
-      document.getElementById("userName").textContent = currentUser.username;
-      document.getElementById("userRole").textContent = getRoleDisplayName(currentUser.role);
+    function showAccessDenied() {
+        document.getElementById('accessDeniedModal').classList.add('show');
+    }
+
+    function updateWelcomeMessage() {
+        const welcomeText = document.querySelector('.welcome-text h1');
+        const roleText = getRoleDisplayName(currentUser.role);
+        welcomeText.textContent = `ยินดีต้อนรับ, ${currentUser.username}`;
+        
+        // Add role badge
+        const roleBadge = document.createElement('span');
+        roleBadge.className = 'role-badge';
+        roleBadge.textContent = roleText;
+        roleBadge.style.cssText = `
+            font-size: 0.8rem;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 15px;
+            margin-left: 1rem;
+        `;
+        welcomeText.appendChild(roleBadge);
     }
 
     function getRoleDisplayName(role) {
-      const roleNames = {
-        'admin': '👑 Admin',
-        'manager': '👔 Manager',
-        'staff': '👨‍💼 Staff',
-        'user': '👤 User'
-      };
-      return roleNames[role] || role;
+        const roleNames = {
+            'admin': '👑 Admin',
+            'manager': '👔 Manager', 
+            'staff': '👨‍💼 Staff',
+            'user': '👤 User'
+        };
+        return roleNames[role] || role;
     }
 
-    function adjustMenuByRole() {
-      // ซ่อนเมนูที่ไม่มีสิทธิ์
-      if (!userPermissions.can_manage_users) {
-        document.getElementById('usersMenu').style.display = 'none';
-      }
-      
-      if (!userPermissions.can_view_reports) {
-        document.getElementById('reportsMenu').style.display = 'none';
-      }
-      
-      if (currentUser.role === 'staff') {
-        document.getElementById('settingsMenu').style.display = 'none';
-      }
-
-      // ปรับปุ่ม quick actions
-      if (!userPermissions.can_manage_products) {
-        document.getElementById('manageProductsBtn').style.display = 'none';
-      }
+    function adjustUIByRole() {
+        // Hide elements based on permissions
+        if (!userPermissions.can_manage_users) {
+            const usersBtn = document.getElementById('usersBtn');
+            if (usersBtn) usersBtn.style.display = 'none';
+        }
+        
+        if (!userPermissions.can_view_reports) {
+            const reportsBtn = document.getElementById('reportsBtn');
+            if (reportsBtn) reportsBtn.style.display = 'none';
+        }
+        
+        if (!userPermissions.can_manage_products) {
+            const manageProductsBtn = document.getElementById('manageProductsBtn');
+            if (manageProductsBtn) manageProductsBtn.style.display = 'none';
+        }
     }
 
-    function loadDashboardData() {
-      fetch('/api/reports/dashboard-stats', {
-        headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
-      })
-      .then(res => res.json())
-      .then(data => {
-        document.getElementById("totalSales").textContent = Number(data.total_sales || 0).toLocaleString();
-        document.getElementById("totalProducts").textContent = data.total_products || 0;
-        document.getElementById("totalUsers").textContent = data.total_users || 0;
-        document.getElementById("todaySales").textContent = Number(data.today_sales || 0).toLocaleString();
-      })
-      .catch(error => {
-        console.error('Error loading dashboard stats:', error);
-      });
+    async function loadDashboardData() {
+        try {
+            const response = await fetch('/api/reports/dashboard-stats', {
+                headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to load dashboard stats');
+            }
+
+            const data = await response.json();
+            
+            // Update stats cards
+            document.getElementById('todaySales').textContent = formatCurrency(data.today_sales || 0);
+            document.getElementById('totalProducts').textContent = (data.total_products || 0).toLocaleString();
+            document.getElementById('totalUsers').textContent = (data.total_users || 0).toLocaleString();
+            document.getElementById('monthlySales').textContent = formatCurrency(data.monthly_sales || 0);
+
+            // Update change indicators
+            updateChangeIndicator('todaySalesChange', data.today_sales_change || 0);
+            updateChangeIndicator('monthlySalesChange', data.monthly_sales_change || 0);
+
+        } catch (error) {
+            console.error('Error loading dashboard stats:', error);
+            showAlert('ไม่สามารถโหลดข้อมูลสถิติได้', 'error');
+        }
     }
 
-    function loadRecentActivities() {
-      // Simulate recent activities - ในการใช้งานจริงจะดึงจาก API
-      const activities = [
-        { time: '10:30', action: 'มีการขายสินค้า', detail: 'ขายสินค้า 3 รายการ มูลค่า 450 บาท' },
-        { time: '10:15', action: 'เพิ่มสินค้าใหม่', detail: 'เพิ่มสินค้า "กาแฟเย็น" เข้าระบบ' },
-        { time: '09:45', action: 'ผู้ใช้ใหม่สมัครสมาชิک', detail: 'มีผู้ใช้ใหม่ 1 คน' },
-        { time: '09:30', action: 'อัพเดทสต็อกสินค้า', detail: 'ปรับสต็อกสินค้าหลายรายการ' }
-      ];
-
-      const container = document.getElementById('recentActivities');
-      container.innerHTML = '';
-
-      activities.forEach(activity => {
-        const activityElement = document.createElement('div');
-        activityElement.className = 'activity-item';
-        activityElement.innerHTML = `
-          <div class="activity-time">${activity.time}</div>
-          <div class="activity-content">
-            <div class="activity-action">${activity.action}</div>
-            <div class="activity-detail">${activity.detail}</div>
-          </div>
+    function updateChangeIndicator(elementId, change) {
+        const element = document.getElementById(elementId);
+        const isPositive = change >= 0;
+        
+        element.className = `stat-change ${isPositive ? 'positive' : 'negative'}`;
+        element.innerHTML = `
+            <i class="fas fa-arrow-${isPositive ? 'up' : 'down'}"></i> 
+            ${isPositive ? '+' : ''}${change.toFixed(1)}%
         `;
-        container.appendChild(activityElement);
-      });
+    }
+
+    function formatCurrency(amount) {
+        return new Intl.NumberFormat('th-TH', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+        }).format(amount);
+    }
+
+    async function loadRecentActivities() {
+        try {
+            const response = await fetch('/api/activities/recent', {
+                headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
+            });
+
+            let activities;
+            if (response.ok) {
+                const data = await response.json();
+                activities = data.activities || [];
+            } else {
+                // Fallback to mock data if API not available
+                activities = generateMockActivities();
+            }
+
+            renderActivities(activities);
+
+        } catch (error) {
+            console.error('Error loading activities:', error);
+            renderActivities(generateMockActivities());
+        }
+    }
+
+    function generateMockActivities() {
+        const now = new Date();
+        return [
+            {
+                time: new Date(now - 10 * 60000).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
+                action: 'มีการขายสินค้า',
+                detail: 'ขายสินค้า 3 รายการ มูลค่า 450 บาท',
+                type: 'sale',
+                icon: 'fas fa-shopping-cart'
+            },
+            {
+                time: new Date(now - 25 * 60000).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
+                action: 'เพิ่มสินค้าใหม่',
+                detail: 'เพิ่มสินค้า "กาแฟเย็น" เข้าระบบ',
+                type: 'product',
+                icon: 'fas fa-plus-circle'
+            },
+            {
+                time: new Date(now - 45 * 60000).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
+                action: 'ผู้ใช้ใหม่สมัครสมาชิก',
+                detail: 'มีผู้ใช้ใหม่ 1 คน',
+                type: 'user',
+                icon: 'fas fa-user-plus'
+            },
+            {
+                time: new Date(now - 70 * 60000).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
+                action: 'อัพเดทสต็อกสินค้า',
+                detail: 'ปรับสต็อกสินค้า 5 รายการ',
+                type: 'inventory',
+                icon: 'fas fa-boxes'
+            }
+        ];
+    }
+
+    function renderActivities(activities) {
+        const container = document.getElementById('recentActivities');
+        
+        if (activities.length === 0) {
+            container.innerHTML = '<div class="no-data">ไม่มีกิจกรรมล่าสุด</div>';
+            return;
+        }
+
+        container.innerHTML = activities.map(activity => `
+            <div class="activity-item">
+                <div class="activity-icon">
+                    <i class="${activity.icon}"></i>
+                </div>
+                <div class="activity-content">
+                    <div class="activity-header">
+                        <span class="activity-action">${activity.action}</span>
+                        <span class="activity-time">${activity.time}</span>
+                    </div>
+                    <div class="activity-detail">${activity.detail}</div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    async function loadTopProducts() {
+        try {
+            const response = await fetch('/api/reports/top-products', {
+                headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
+            });
+
+            let products;
+            if (response.ok) {
+                const data = await response.json();
+                products = data.products || [];
+            } else {
+                // Mock data
+                products = [
+                    { name: 'กาแฟ', sales: 150, revenue: 4500 },
+                    { name: 'ขนมปัง', sales: 120, revenue: 2400 },
+                    { name: 'น้ำดื่ม', sales: 200, revenue: 2000 },
+                    { name: 'นม', sales: 80, revenue: 1600 },
+                    { name: 'ผลไม้', sales: 60, revenue: 1800 }
+                ];
+            }
+
+            renderTopProducts(products);
+
+        } catch (error) {
+            console.error('Error loading top products:', error);
+        }
+    }
+
+    function renderTopProducts(products) {
+        const container = document.getElementById('topProducts');
+        
+        if (products.length === 0) {
+            container.innerHTML = '<div class="no-data">ไม่มีข้อมูลสินค้า</div>';
+            return;
+        }
+
+        container.innerHTML = products.slice(0, 5).map((product, index) => `
+            <div class="top-product-item">
+                <div class="product-rank">${index + 1}</div>
+                <div class="product-info">
+                    <div class="product-name">${product.name}</div>
+                    <div class="product-stats">
+                        ขาย ${product.sales} ชิ้น • รายได้ ${formatCurrency(product.revenue)} บาท
+                    </div>
+                </div>
+                <div class="product-badge">
+                    <i class="fas fa-trophy"></i>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    async function checkLowStock() {
+        try {
+            const response = await fetch('/api/inventory/low-stock', {
+                headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
+            });
+
+            let lowStockItems = [];
+            if (response.ok) {
+                const data = await response.json();
+                lowStockItems = data.items || [];
+            }
+
+            if (lowStockItems.length > 0) {
+                renderLowStockAlert(lowStockItems);
+            }
+
+        } catch (error) {
+            console.error('Error checking low stock:', error);
+        }
+    }
+
+    function renderLowStockAlert(items) {
+        const section = document.getElementById('lowStockSection');
+        const container = document.getElementById('lowStockItems');
+        
+        section.style.display = 'block';
+        container.innerHTML = items.map(item => `
+            <div class="low-stock-item">
+                <div class="item-info">
+                    <span class="item-name">${item.name}</span>
+                    <span class="item-stock">เหลือ ${item.stock} ชิ้น</span>
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="window.location.href='/products/${item.id}/edit'">
+                    <i class="fas fa-edit"></i> แก้ไข
+                </button>
+            </div>
+        `).join('');
+    }
+
+    function initializeSalesChart() {
+        const ctx = document.getElementById('salesChartCanvas').getContext('2d');
+        
+        // Mock chart data
+        const mockData = {
+            labels: ['จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส', 'อา'],
+            datasets: [{
+                label: 'ยอดขาย (บาท)',
+                data: [1200, 1900, 3000, 5000, 2000, 3000, 4500],
+                borderColor: '#667eea',
+                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4
+            }]
+        };
+
+        salesChart = new Chart(ctx, {
+            type: 'line',
+            data: mockData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return formatCurrency(value) + ' บาท';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Add event listeners for filter buttons
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                
+                const period = this.dataset.period;
+                updateSalesChart(period);
+            });
+        });
+    }
+
+    function updateSalesChart(period) {
+        // Mock data update based on period
+        let labels, data;
+        
+        switch(period) {
+            case '30':
+                labels = Array.from({length: 30}, (_, i) => `${i + 1}`);
+                data = Array.from({length: 30}, () => Math.floor(Math.random() * 5000) + 1000);
+                break;
+            case '90':
+                labels = ['ม.ค.', 'ก.พ.', 'มี.ค.'];
+                data = [45000, 52000, 48000];
+                break;
+            default:
+                labels = ['จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส', 'อา'];
+                data = [1200, 1900, 3000, 5000, 2000, 3000, 4500];
+        }
+
+        salesChart.data.labels = labels;
+        salesChart.data.datasets[0].data = data;
+        salesChart.update();
     }
 
     function goToStore() {
-      window.location.href = '/';
+        window.location.href = '/';
     }
 
-    function logout() {
-      localStorage.removeItem("access_token");
-      localStorage.removeItem("user_data");
-      window.location.href = "/login";
+    // Helper function to show alerts
+    function showAlert(message, type = 'info') {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type}`;
+        alertDiv.innerHTML = `
+            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-triangle' : 'info-circle'}"></i>
+            ${message}
+        `;
+        
+        const contentArea = document.querySelector('.content-area');
+        contentArea.insertBefore(alertDiv, contentArea.firstChild);
+        
+        setTimeout(() => {
+            alertDiv.remove();
+        }, 5000);
     }
-  </script>
+</script>
 
-  <style>
-    /* Dashboard Styles */
-    .dashboard {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background-color: #f5f7fa;
-    }
-
-    .navbar {
-      background: white;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-
-    .navbar-content {
-      max-width: 1400px;
-      margin: 0 auto;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 1rem;
-    }
-
-    .navbar-brand {
-      font-size: 1.5rem;
-      font-weight: bold;
-      color: #333;
-      text-decoration: none;
-    }
-
-    .navbar-nav {
-      display: flex;
-      list-style: none;
-      gap: 2rem;
-      margin: 0;
-      padding: 0;
-    }
-
-    .navbar-nav a {
-      text-decoration: none;
-      color: #666;
-      font-weight: 500;
-      padding: 0.5rem 1rem;
-      border-radius: 5px;
-      transition: all 0.3s;
-    }
-
-    .navbar-nav a:hover,
-    .navbar-nav a.active {
-      background: #667eea;
-      color: white;
-    }
-
-    .user-info {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-    }
-
-    .user-role {
-      font-size: 0.9rem;
-      padding: 0.25rem 0.75rem;
-      background: #e3f2fd;
-      color: #1976d2;
-      border-radius: 15px;
-      font-weight: 500;
-    }
-
-    .logout-btn {
-      padding: 0.5rem 1rem;
-      background: #ff4757;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      font-weight: 500;
-      transition: background 0.3s;
-    }
-
-    .logout-btn:hover {
-      background: #ff3742;
-    }
-
-    .main-content {
-      max-width: 1400px;
-      margin: 0 auto;
-      padding: 2rem;
-    }
-
-    .page-header {
-      text-align: center;
-      margin-bottom: 3rem;
-    }
-
-    .page-header h1 {
-      color: #333;
-      margin-bottom: 0.5rem;
-    }
-
-    .page-header p {
-      color: #666;
-      font-size: 1.1rem;
-    }
-
-    .cards-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 2rem;
-      margin-bottom: 3rem;
-    }
-
-    .card {
-      background: white;
-      border-radius: 15px;
-      padding: 2rem;
-      box-shadow: 0 5px 15px rgba(0,0,0,0.08);
-      transition: transform 0.3s;
-    }
-
-    .card:hover {
-      transform: translateY(-5px);
-    }
-
-    .card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 1rem;
-    }
-
-    .card-title {
-      font-weight: 600;
-      color: #333;
-    }
-
-    .card-icon {
-      font-size: 2rem;
-    }
-
-    .card-value {
-      font-size: 2.5rem;
-      font-weight: bold;
-      color: #667eea;
-      margin-bottom: 0.5rem;
-    }
-
-    .card-subtitle {
-      color: #666;
-      font-size: 0.9rem;
-    }
-
-    .dashboard-sections {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-      gap: 2rem;
-    }
-
-    .dashboard-section {
-      background: white;
-      border-radius: 15px;
-      padding: 2rem;
-      box-shadow: 0 5px 15px rgba(0,0,0,0.08);
-    }
-
-    .dashboard-section h2 {
-      color: #333;
-      margin-bottom: 1.5rem;
-      font-size: 1.5rem;
-    }
-
-    .quick-actions {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-      gap: 1rem;
-    }
-
-    .quick-action-btn {
-      background: #f8f9ff;
-      border: 2px solid #e3f2fd;
-      border-radius: 10px;
-      padding: 1.5rem;
-      cursor: pointer;
-      text-align: center;
-      transition: all 0.3s;
-    }
-
-    .quick-action-btn:hover {
-      background: #667eea;
-      color: white;
-      transform: translateY(-3px);
-    }
-
-    .quick-action-icon {
-      font-size: 2rem;
-      margin-bottom: 0.5rem;
-    }
-
-    .quick-action-text {
-      font-weight: 500;
-      font-size: 0.9rem;
-    }
-
-    .recent-activities {
-      max-height: 400px;
-      overflow-y: auto;
+<style>
+    /* Additional styles for dashboard specific elements */
+    .activities-container {
+        max-height: 400px;
+        overflow-y: auto;
     }
 
     .activity-item {
-      display: flex;
-      gap: 1rem;
-      padding: 1rem 0;
-      border-bottom: 1px solid #eee;
+        display: flex;
+        align-items: flex-start;
+        gap: 1rem;
+        padding: 1rem 0;
+        border-bottom: 1px solid #eee;
     }
 
     .activity-item:last-child {
-      border-bottom: none;
+        border-bottom: none;
     }
 
-    .activity-time {
-      font-weight: 500;
-      color: #667eea;
-      min-width: 60px;
+    .activity-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
     }
 
     .activity-content {
-      flex: 1;
+        flex: 1;
+    }
+
+    .activity-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.25rem;
     }
 
     .activity-action {
-      font-weight: 500;
-      color: #333;
-      margin-bottom: 0.25rem;
+        font-weight: 600;
+        color: #333;
+    }
+
+    .activity-time {
+        font-size: 0.8rem;
+        color: #667eea;
+        font-weight: 500;
     }
 
     .activity-detail {
-      color: #666;
-      font-size: 0.9rem;
+        color: #666;
+        font-size: 0.9rem;
     }
 
-    .activity-loading {
-      text-align: center;
-      color: #666;
-      padding: 2rem;
+    .top-products-container {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
     }
 
-    /* Access Denied Styles */
-    .access-denied {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100
+    .top-product-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        transition: all 0.3s ease;
+    }
+
+    .top-product-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .product-rank {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 0.9rem;
+    }
+
+    .product-info {
+        flex: 1;
+    }
+
+    .product-name {
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 0.25rem;
+    }
+
+    .product-stats {
+        font-size: 0.8rem;
+        color: #666;
+    }
+
+    .product-badge {
+        color: #FFD700;
+        font-size: 1.2rem;
+    }
+
+    .low-stock-container {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .low-stock-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem;
+        background: rgba(255, 193, 7, 0.1);
+        border: 1px solid rgba(255, 193, 7, 0.3);
+        border-radius: 8px;
+    }
+
+    .item-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .item-name {
+        font-weight: 600;
+        color: #333;
+    }
+
+    .item-stock {
+        font-size: 0.9rem;
+        color: #f57c00;
+        font-weight: 500;
+    }
+
+    .btn-sm {
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+    }
+
+    .no-data {
+        text-align: center;
+        color: #666;
+        padding: 2rem;
+        font-style: italic;
+    }
+
+    .chart-placeholder {
+        height: 300px;
+        position: relative;
+    }
+
+    #salesChartCanvas {
+        max-height: 300px;
+    }
+
+    @media (max-width: 768px) {
+        .activity-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.25rem;
+        }
+
+        .top-product-item {
+            flex-direction: column;
+            text-align: center;
+            gap: 0.5rem;
+        }
+
+        .low-stock-item {
+            flex-direction: column;
+            gap: 1rem;
+            text-align: center;
+        }
+    }
+</style>
+{% endblock %}

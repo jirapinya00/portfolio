@@ -2,29 +2,397 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <title>{% block title %}POS{% endblock %}</title>
+  <title>{% block title %}POS ระบบขายหน้าร้าน{% endblock %}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      color: #333;
+    }
+
+    /* Navbar Styles */
+    .navbar {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .navbar-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+    }
+
+    .navbar-brand {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #667eea;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.3s ease;
+    }
+
+    .navbar-brand:hover {
+      transform: scale(1.05);
+    }
+
+    .navbar-brand::before {
+      content: "🛍️";
+      font-size: 2rem;
+    }
+
+    .navbar-nav {
+      display: flex;
+      list-style: none;
+      gap: 0.5rem;
+      margin: 0;
+      padding: 0;
+    }
+
+    .navbar-nav li a {
+      text-decoration: none;
+      color: #555;
+      font-weight: 500;
+      padding: 0.75rem 1.25rem;
+      border-radius: 25px;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .navbar-nav li a::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(45deg, #667eea, #764ba2);
+      transition: left 0.3s ease;
+      z-index: -1;
+    }
+
+    .navbar-nav li a:hover::before,
+    .navbar-nav li a.active::before {
+      left: 0;
+    }
+
+    .navbar-nav li a:hover,
+    .navbar-nav li a.active {
+      color: white;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    #userName {
+      font-weight: 600;
+      color: #333;
+      padding: 0.5rem 1rem;
+      background: rgba(102, 126, 234, 0.1);
+      border-radius: 20px;
+      border: 2px solid rgba(102, 126, 234, 0.2);
+    }
+
+    .login-btn, .logout-btn {
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 25px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    .login-btn {
+      background: linear-gradient(45deg, #4CAF50, #45a049);
+      color: white;
+    }
+
+    .logout-btn {
+      background: linear-gradient(45deg, #ff6b6b, #ee5a52);
+      color: white;
+    }
+
+    .login-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+    }
+
+    .logout-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+    }
+
+    /* Main Content */
+    .main-content {
+      max-width: 1200px;
+      margin: 2rem auto;
+      padding: 0 2rem;
+      min-height: calc(100vh - 200px);
+    }
+
+    .page-header {
+      text-align: center;
+      margin-bottom: 3rem;
+      color: white;
+    }
+
+    .page-header h1 {
+      font-size: 3rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    .page-header p {
+      font-size: 1.2rem;
+      opacity: 0.9;
+      text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Products Section */
+    .products-section {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    #searchInput {
+      width: 100%;
+      padding: 1rem 1.5rem;
+      border: 2px solid #e0e0e0;
+      border-radius: 25px;
+      font-size: 1.1rem;
+      margin-bottom: 2rem;
+      transition: all 0.3s ease;
+      background: white;
+    }
+
+    #searchInput:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 20px rgba(102, 126, 234, 0.2);
+    }
+
+    .product-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .product-item {
+      background: white;
+      border-radius: 15px;
+      padding: 1.5rem;
+      text-align: center;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
+      border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    .product-item:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+    }
+
+    .product-item h3 {
+      color: #333;
+      margin-bottom: 0.5rem;
+      font-size: 1.2rem;
+    }
+
+    .product-item p {
+      color: #667eea;
+      font-weight: 600;
+      font-size: 1.1rem;
+      margin-bottom: 1rem;
+    }
+
+    .product-item button {
+      background: linear-gradient(45deg, #667eea, #764ba2);
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 25px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+
+    .product-item button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    /* Cart Section */
+    .cart-section {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 2rem;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .cart-section h2 {
+      color: #333;
+      margin-bottom: 1.5rem;
+      font-size: 1.8rem;
+      text-align: center;
+    }
+
+    #cartItems {
+      min-height: 200px;
+      margin-bottom: 1.5rem;
+    }
+
+    .cart-summary {
+      text-align: center;
+      padding-top: 1.5rem;
+      border-top: 2px solid #e0e0e0;
+    }
+
+    .cart-summary p {
+      font-size: 1.3rem;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 1rem;
+    }
+
+    .cart-summary button {
+      background: linear-gradient(45deg, #4CAF50, #45a049);
+      color: white;
+      border: none;
+      padding: 1rem 2rem;
+      border-radius: 25px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .cart-summary button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+    }
+
+    /* Mobile Responsive */
+    @media (max-width: 768px) {
+      .navbar-content {
+        flex-direction: column;
+        padding: 1rem;
+        gap: 1rem;
+      }
+
+      .navbar-nav {
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+
+      .main-content {
+        padding: 0 1rem;
+      }
+
+      .page-header h1 {
+        font-size: 2rem;
+      }
+
+      .product-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .user-info {
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+    }
+
+    /* Loading Animation */
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(102, 126, 234, 0.3);
+      border-radius: 50%;
+      border-top-color: #667eea;
+      animation: spin 1s ease-in-out infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Success/Error Messages */
+    .alert {
+      padding: 1rem 1.5rem;
+      border-radius: 10px;
+      margin-bottom: 1rem;
+      font-weight: 500;
+    }
+
+    .alert-success {
+      background: rgba(76, 175, 80, 0.1);
+      color: #2e7d32;
+      border: 1px solid rgba(76, 175, 80, 0.3);
+    }
+
+    .alert-error {
+      background: rgba(244, 67, 54, 0.1);
+      color: #c62828;
+      border: 1px solid rgba(244, 67, 54, 0.3);
+    }
+  </style>
 </head>
 <body>
   {% block navbar %}
     <nav class="navbar">
       <div class="navbar-content">
-        <a class="navbar-brand" href="#">My POS</a>
+        <a class="navbar-brand" href="/">My Shop</a>
         <ul class="navbar-nav">
-          <li><a href="/dashboard">แดชบอร์ด</a></li>
-          <li><a href="/pos">ขายสินค้า</a></li>
-          <li><a href="/products">สินค้า</a></li>
-          <li><a href="/reports">รายงาน</a></li>
-          <li><a href="/settings">ตั้งค่า</a></li>
+          <li><a href="/"><i class="fas fa-tachometer-alt"></i> หน้าแรก</a></li>
+          <li><a href="/pos"><i class="fas fa-cash-register"></i> โปรโมชั่น</a></li>
+          <li><a href="/about"><i class="fas fa-box"></i> เกี่ยวกับเรา</a></li>
+          <li><a href="/contact"><i class="fas fa-chart-bar"></i> ติดต่อ</a></li>
+          <li><a href="/settings"><i class="fas fa-cog"></i> ตั้งค่า</a></li>
         </ul>
         <div class="user-info">
             <span id="userName">ผู้เยี่ยมชม</span>
-            <button class="login-btn" id="loginBtn" onclick="window.location.href='/login'" style="display: none;">เข้าสู่ระบบ</button>
-            <button class="logout-btn" onclick="logout()" style="display: none;">ออกจากระบบ</button>
+            <button class="login-btn" id="loginBtn" onclick="window.location.href='/login'" style="display: none;">
+              <i class="fas fa-sign-in-alt"></i> เข้าสู่ระบบ
+            </button>
+            <button class="logout-btn" onclick="logout()" style="display: none;">
+              <i class="fas fa-sign-out-alt"></i> ออกจากระบบ
+            </button>
         </div>
-
-
       </div>
     </nav>
   {% endblock %}
@@ -37,7 +405,7 @@
     const logoutBtn = document.querySelector(".logout-btn");
     const loginBtn = document.getElementById("loginBtn");
 
-    userNameEl.innerText = username;
+    userNameEl.innerText = `👤 ${username}`;
 
     if (isLoggedIn) {
       logoutBtn.style.display = "inline-block";
@@ -73,10 +441,34 @@
     updateUserUI(false);
     window.location.href = "/";
   }
+
+  // Smooth scrolling for internal links
+  document.addEventListener('DOMContentLoaded', function() {
+    const links = document.querySelectorAll('a[href^="#"]');
+    links.forEach(link => {
+      link.addEventListener('click', function(e) {
+        e.preventDefault();
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth' });
+        }
+      });
+    });
+  });
+
+  // Show loading state
+  function showLoading(element) {
+    const original = element.innerHTML;
+    element.innerHTML = '<span class="loading"></span> กำลังโหลด...';
+    element.disabled = true;
+    return original;
+  }
+
+  function hideLoading(element, originalContent) {
+    element.innerHTML = originalContent;
+    element.disabled = false;
+  }
 </script>
-
-
-  
 
   {% block script %}{% endblock %}
 </body>
