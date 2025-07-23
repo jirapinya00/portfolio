@@ -196,7 +196,10 @@ def register_page():
 
 @app.route('/dashboard')
 def dashboard():
+    token = request.cookies.get('access_token_cookie')  # หรือใช้ session
+    # หรือไม่ต้องเช็คตรงนี้ ถ้าทำฝั่ง frontend แล้ว
     return render_template('dashboard.html')
+
 
 @app.route('/pos')
 def pos_dashboard():
