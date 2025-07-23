@@ -287,12 +287,14 @@ def login():
         if not data.get('username') or not data.get('password'):
             return jsonify({'message': 'กรุณากรอก username และ password'}), 400
         
+        password = data['password'] # เพิ่มตัวแปร password จากhtml
+        
         # หา user จาก username หรือ email
         user = User.query.filter(
             (User.username == data['username']) | (User.email == data['username'])
         ).first()
         
-        if not user or not check_password_hash(user.password_hash, data['password']):
+        if not user or not check_password_hash(user.password_hash, password):
             return jsonify({'message': 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง'}), 401
         
         if not user.is_active:
@@ -341,7 +343,7 @@ def get_profile():
     except Exception as e:
         return jsonify({'message': 'เกิดข้อผิดพลาด: ' + str(e)}), 500
 
-# API Routes - Products
+# API Routes
 @app.route('/api/products', methods=['GET'])
 @jwt_required()
 def get_products():

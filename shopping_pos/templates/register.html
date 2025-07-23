@@ -32,18 +32,12 @@
                     <small>อย่างน้อย 6 ตัวอักษร</small>
                 </div>
                 
-                <div class="form-group">
+                
+                 <div class="form-group">
                     <label for="confirmPassword">ยืนยันรหัสผ่าน</label>
                     <input type="password" id="confirmPassword" name="confirmPassword" required>
                 </div>
-                
-                <div class="form-group">
-                    <label for="role">ตำแหน่ง</label>
-                    <select id="role" name="role_id">
-                        <option value="2">พนักงาน (Staff)</option>
-                        <option value="3">ผู้จัดการ (Manager)</option>
-                    </select>
-                </div>
+    
                 
                 <button type="submit" class="btn btn-primary btn-login">
                     สมัครสมาชิก
@@ -88,7 +82,7 @@
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
             const confirmPassword = document.getElementById('confirmPassword').value;
-            const roleId = document.getElementById('role').value;
+            const roleId = 4;
             
             // ตรวจสอบข้อมูล
             if (!username || !email || !password || !confirmPassword) {
@@ -114,18 +108,26 @@
             }
             
             showLoading(true);
+
+
+            // ในฟังก์ชัน submitRegister() เปลี่ยนจาก:
+
+
+      
             
             fetch('/api/auth/register', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({
-                    username: username,
-                    email: email,
-                    password: password,
-                    role_id: parseInt(roleId)
-                })
+                 
+                    body: JSON.stringify({
+                        username: username,
+                        email: email,
+                        password: password,
+                        role_id: roleId  // จะเป็น 4 เสมอ
+                    })
+
             })
             .then(response => response.json())
             .then(data => {

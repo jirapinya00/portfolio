@@ -173,12 +173,20 @@ body {
     color: white;
 }
 
-.btn-login {
-    width: 100%;
-    padding: 15px;
-    font-size: 18px;
-    margin-top: 10px;
+.login-btn {
+ background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
 }
+
+.login-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
 
 .btn:disabled {
     opacity: 0.6;
